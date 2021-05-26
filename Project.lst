@@ -1,16 +1,15 @@
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/07/21 20:26:09
-#Program Template     (template.asm			     Page 1 - 1
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/26/21 14:33:11
+5Low level I/O Procedure Program     (Proj6_awanf.asm	     Page 1 - 1
 
 
-				TITLE Program Template     (template.asm)
+				TITLE  Low level I/O Procedure Program     (Proj6_awanf.asm)
 
-				; Author: 
-				; Last Modified:
-				; OSU email address: ONID_ID@oregonstate.edu
-				; Course number/section:   CS271 Section ???
-				; Project Number:                 Due Date:
-				; Description: This file is provided as a template from which you may work
-				;              when developing assembly projects in CS271.
+				; Author: Fahad Awan
+				; Last Modified: 5/25/2021
+				; OSU email address:awanf@oregonstate.edu
+				; Course number/section:   CS271 Section 400
+				; Project Number:         6        Due Date: 6/6/2021
+				; Description: 
 
 				INCLUDE Irvine32.inc
 			      C ; Include file for Irvine32.lib             (Irvine32.inc)
@@ -31,38 +30,118 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/07/21 20:26:09
 			      C .LIST
 			      C 
 
-				; (insert macro definitions here)
+				; ---------------------------------------------------------------------------------
+				; Name: mGetString
+				;
+				; Displays prompt then get's user's keyboard input into a memory location.
+				;
+				; Preconditions: do not use eax, ecx as arguments
+				; Postconditions: EAX modified
+				;
+				; Receives:
+				; promptOffset = prompt string offset
+				; storeLocation = variable to store user input
+				; lengthValue = maximum amount of characters to store
+				;	
+				; returns: user keyboard input stored in storeLocation
+				;		   amount of bytes read in EAX
+				; ---------------------------------------------------------------------------------
+				mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, lengthValue:REQ
+					
 
+				.code
+					PUSH	EDX
+					PUSH	ECX
+
+					MOV		EDX, promptOffset
+					CALL	WriteString
+					
+					mov edx, storeLocationOffset ; point to the buffer
+					mov ecx, lengthValue+1 ; specify max characters
+					call ReadString ; input the string
+					
+					POP		ECX
+					POP		EDX
+					
+				ENDM
+
+
+				; ---------------------------------------------------------------------------------
+				; Name: mDisplayString
+				;
+				; Displays
+				;
+				; Preconditions: do not use eax, ecx as arguments
+				; Postconditions: EAX modified
+				;
+				; Receives: stringOffset = offset of string to display
+				;	
+				;	
+				; returns: user keyboard input stored in storeLocation
+				;		   amount of bytes read in EAX
+				; ---------------------------------------------------------------------------------
+				mDisplayString MACRO stringOffset:REQ
+					PUSH	EDX
+					MOV		EDX, stringOffset
+					CALL	WriteString
+					POP		EDX
+				ENDM
+
+				; ...
 				; (insert constant definitions here)
 
  00000000			 .data
- 00000000 59 65 73 00		yes     BYTE    "Yes",0
- 00000004 4E 6F 00		no      BYTE    "No",0
- 00000007 4D 61 79 62 65	maybe   BYTE    "Maybe: ",0
-	   3A 20 00
- 0000000F 68 65 6C 6C 6F	tester	BYTE	104 ,101, 108, 108, 111
+
+ 00000000 41 42 43 44 45	 testString	BYTE	"ABCDE",0
+	   00
+ 00000006  00000005 [		 storedString BYTE	5 DUP(?)
+	    00
+	   ]
+
 
 				; (insert variable definitions here)
 
  00000000			.code
  00000000			main PROC
 
- 00000000  BA 0000000F R	  MOV	EDX, OFFSET	tester
- 00000005  E8 00000000 E	  CALL	WriteString
-				; (insert executable instructions here)
+					mGetString OFFSET testString,  OFFSET storedString, 5
+ 00000000		     1	.code
+ 00000000  52		     1		PUSH	EDX
+ 00000001  51		     1		PUSH	ECX
+ 00000002  BA 00000000 R     1		MOV		EDX, OFFSET testString
+ 00000007  E8 00000000 E     1		CALL	WriteString
+ 0000000C  BA 00000006 R     1		mov edx, OFFSET storedString ; point to the buffer
+ 00000011  B9 00000006	     1		mov ecx, 5+1 ; specify max characters
+ 00000016  E8 00000000 E     1		call ReadString ; input the string
+ 0000001B  59		     1		POP		ECX
+ 0000001C  5A		     1		POP		EDX
+					mDisplayString		OFFSET	 storedString
+ 0000001D  52		     1		PUSH	EDX
+ 0000001E  BA 00000006 R     1		MOV		EDX, OFFSET	 storedString
+ 00000023  E8 00000000 E     1		CALL	WriteString
+ 00000028  5A		     1		POP		EDX
+
 
 					Invoke ExitProcess,0	; exit to operating system
- 0000000A  6A 00	   *	    push   +000000000h
- 0000000C  E8 00000000 E   *	    call   ExitProcess
- 00000011			main ENDP
+ 00000029  6A 00	   *	    push   +000000000h
+ 0000002B  E8 00000000 E   *	    call   ExitProcess
+ 00000030			main ENDP
 
 				; (insert additional procedures here)
 
 				END main
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/07/21 20:26:09
-#Program Template     (template.asm			     Symbols 2 - 1
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/26/21 14:33:11
+5Low level I/O Procedure Program     (Proj6_awanf.asm	     Symbols 2 - 1
 
 
+
+
+Macros:
+
+                N a m e                 Type
+
+mDisplayString . . . . . . . . .	Proc
+mGetString . . . . . . . . . . .	Proc
 
 
 Structures and Unions:
@@ -153,8 +232,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000014 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000011 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000000B Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000030 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -261,7 +340,7 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000011 Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000030 Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -494,14 +573,12 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
-maybe  . . . . . . . . . . . . .	Byte	 00000007 _DATA	
-no . . . . . . . . . . . . . . .	Byte	 00000004 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-tester . . . . . . . . . . . . .	Byte	 0000000F _DATA	
+storedString . . . . . . . . . .	Byte	 00000006 _DATA	
+testString . . . . . . . . . . .	Byte	 00000000 _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
-yes  . . . . . . . . . . . . . .	Byte	 00000000 _DATA	
 
 	   0 Warnings
 	   0 Errors
