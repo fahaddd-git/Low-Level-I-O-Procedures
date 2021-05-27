@@ -37,7 +37,7 @@ mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, lengthValue:REQ
 	CALL	WriteString
 	
 	mov edx, storeLocationOffset	 ; point to the buffer
-	mov ecx, lengthValue+1			 ; specify max characters
+	mov ecx, lengthValue			 ; specify max characters
 	call ReadString					 ; input the string
 	
 	POP		ECX
@@ -70,7 +70,7 @@ mDisplayString MACRO stringOffset:REQ
 	POP		EDX
 ENDM
 
-MAXNUMS=3
+MAXNUMS=1
 PLUS=43
 MINUS=45
 ZERO=48
@@ -81,11 +81,12 @@ NINE=57
 	userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
 
 
-	inString	BYTE	"1235",0
+	inString	BYTE	"5",0
 	outString	SDWORD	0
 
-	storedString BYTE	5 DUP(?)
+	storedString BYTE	11 DUP(?) ; 10 digits max
 	integerTranslator		SDWORD		?
+	charLength	DWORD		?
 
 
 
@@ -96,9 +97,9 @@ main PROC
 	;mGetString			OFFSET testString,  OFFSET storedString, 5
 	;mDisplayString		OFFSET	 storedString
 	
-	;PUSH	MAXNUMS
-	;PUSH	OFFSET userStrings
-	;CALL	ReadVal
+	PUSH	MAXNUMS
+	PUSH	OFFSET userStrings
+	CALL	ReadVal
 	CALL	convert
 
 
@@ -131,13 +132,19 @@ ReadVal PROC
 	MOV		EBP, ESP
 
 	MOV		EDI, [EBP+8]  ;userStrings array
-	MOV		ECX, [EBP+12] ;MAXNUMS
+	MOV		ECX, MAXNUMS
 
 	;prompts and fills userStrings array with input
 _promptLoop:
 
-	mGetString	OFFSET enterNum, EDI, 16
-	ADD			EDI, 4
+	mGetString	OFFSET enterNum, OFFSET storedString, LENGTHOF storedString
+	MOV		charLength, EAX
+	
+	MOV		EDX, OFFSET storedString
+	CALL	WriteString
+	;CALL		convert	
+	
+	;ADD			EDI, 4
 	LOOP		_promptLoop
 
 	; at this point, userStrings array filled with input strings unvalidated
@@ -145,15 +152,17 @@ _promptLoop:
 
 	; prints the userStrings strings array
 	
-	MOV			ECX, [EBP+12] ;MAXNUMS
-	MOV			EDX, [EBP+8]	;userStrings array
+;	MOV			ECX,  [EBP+12] ;MAXNUMS
+;	MOV			EDX, [EBP+8]	;userStrings array
 
 
-_printLoop:
+;_printLoop:
 
-	CALL	WriteString
-	ADD		EDX, 4
-	LOOP	_printLoop
+;	CALL	WriteString
+;	MOV		AL, ","
+;	CALL	WriteChar
+;	ADD		EDX, 4
+;	LOOP	_printLoop
 
 
 
@@ -163,7 +172,7 @@ _printLoop:
 
 
 	POP		EBP
-	RET		8
+	RET		12
 
 
 ReadVal ENDP
@@ -184,12 +193,13 @@ WriteVal ENDP
 
 
 convert PROC
+
 LOCAL		negBool:BYTE, lengthCounter:DWORD
 
-	MOV		   ESI, OFFSET inString
-	;MOV		   EDI, OFFSET	outString
+	MOV			ESI, OFFSET storedString
+	;MOV		EDI, OFFSET	outString
 
-	MOV		   ECX, LENGTHOF inString  -1  ;"109"
+	MOV			ECX, LENGTHOF storedString  -1  ;"109"
 	XOR			EAX, EAX	; clear accumulator for conversion
 	MOV			lengthCounter, 0
 	
@@ -219,12 +229,15 @@ _checkPlus:
 
 _continueCalcs:
 
-	; checks to see if the digit string is an actual numerical digit
+	; checks to see if the digit string is an actual numerical digit. 
+	CMP			EAX, 0			; end of the string (null terminator)
+	JE			_endCalculations
 
 	CMP			EAX, ZERO
 	JL			_invalidItem	;invalid entry ascii was less than ZERO
 	CMP			EAX, NINE
 	JG			_invalidItem	;invalid entry ascii was greater than NINE
+	
 
 
 
@@ -245,9 +258,11 @@ _continueCalcs:
 
 	LOOP	_toIntLoop
 
+_endCalculations:
+
 	CMP			negBool, 1
 	JNE			_writeToConsole
-	NEG			integerTranslator
+	NEG			integerTranslator		; negBool was raised, negate the number
 
 
 _writeToConsole:
@@ -256,12 +271,14 @@ _writeToConsole:
 	CALL	WriteInt
 	JMP		_return
 
+	; invalid entry 
+
 _invalidItem:
 	MOV		EAX, 9999
 	CALL	WriteDec
 
 _return:
-	RET
+	RET 
 
 convert ENDP
 
