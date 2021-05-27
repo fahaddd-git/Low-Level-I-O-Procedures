@@ -81,7 +81,7 @@ NINE=57
 	userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
 
 
-	inString	BYTE	"+1345",0
+	inString	BYTE	"1345",0
 	outString	SDWORD	0
 
 	storedString BYTE	5 DUP(?)
@@ -198,21 +198,20 @@ LOCAL		negBool:BYTE, lengthCounter:DWORD
 _toIntLoop:
 	LODSB						; load string digit from inString into AL
 
-	MOV			EBX, EAX		; store a copy in EBX
 
 	; this all gets skipped after first digit checked for sign
 
 	INC			lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
 	CMP			lengthCounter, 1
 	JNE			_continueCalcs	; past the first digit, so don't check for sign
-	CMP			EBX, MINUS		; compare ascii of first digit with ascii of -
+	CMP			EAX, MINUS		; compare ascii of first digit with ascii of -
 	JNE			_checkPlus		; if no - sign present check for + sign
 	MOV			negBool, 1		; - sign present raise the negBool flag
 	LOOP		_toIntLoop		; move to next digit, a negative sign was found
 	
 _checkPlus:	
 	
-	CMP			EBX, PLUS		; compare ascii of first digit with ascii of +
+	CMP			EAX, PLUS		; compare ascii of first digit with ascii of +
 	JNE			_continueCalcs	; if no + sign present
 	LOOP		_toIntLoop		; move to next digit, nothing to calculate
 
@@ -220,11 +219,17 @@ _checkPlus:
 
 _continueCalcs:
 
-	
+	; checks to see if the digit string is an actual numerical digit
+
+	CMP			EAX, ZERO
+	JL			_invalidItem	;invalid entry ascii was less than ZERO
+	CMP			EAX, NINE
+	JG			_invalidItem	;invalid entry ascii was greater than NINE
 
 
 
 
+	MOV			EBX, EAX		; store a copy in EBX
 	SUB			EAX, 48			; determines numerical representation of single valid digit
 	MOV			EBX, EAX		; 
 	MOV			EAX, integerTranslator	; gets the previous calculations
@@ -244,6 +249,13 @@ _writeToConsole:
 
 	MOV		EAX, integerTranslator
 	CALL	WriteInt
+	JMP		_return
+
+_invalidItem:
+	MOV		EAX, 9999
+	CALL	WriteDec
+
+_return:
 	RET
 
 convert ENDP

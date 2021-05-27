@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 14:43:43
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 15:11:54
 5Low level I/O Procedure Program     (Proj6_awanf.asm	     Page 1 - 1
 
 
@@ -94,6 +94,8 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 14:43:43
  = 00000003			MAXNUMS=3
  = 0000002B			PLUS=43
  = 0000002D			MINUS=45
+ = 00000030			ZERO=48
+ = 00000039			NINE=57
 
  00000000			.data
  00000000 45 6E 74 65 72		enterNum		BYTE		"Enter a signed number: ",0
@@ -106,7 +108,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 14:43:43
 	   ]
 
 
- 00000024 2B 31 33 34 35		inString	BYTE	"+1345",0
+ 00000024 31 33 34 35 7A		inString	BYTE	"1345z",0
 	   00
  0000002A 00000000			outString	SDWORD	0
 
@@ -242,63 +244,76 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 14:43:43
  00000062			_toIntLoop:
  00000062  AC				LODSB						; load string digit from inString into AL
 
- 00000063  8B D8			MOV			EBX, EAX		; store a copy in EBX
 
+					; this all gets skipped after first digit checked for sign
 
- 00000065  FF 45 F8			INC			lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
- 00000068  83 7D F8 01			CMP			lengthCounter, 1
- 0000006C  75 12			JNE			_continueCalcs	; past the first digit, so don't check for sign
- 0000006E  83 FB 2D			CMP			EBX, MINUS		; compare ascii of first digit with ascii of -
- 00000071  75 06			JNE			_checkPlus		; if no - sign present check for + sign
- 00000073  C6 45 FF 01			MOV			negBool, 1		; - sign present raise the negBool flag
- 00000077  E2 E9			LOOP		_toIntLoop		; move to next digit, a negative sign was found
+ 00000063  FF 45 F8			INC			lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
+ 00000066  83 7D F8 01			CMP			lengthCounter, 1
+ 0000006A  75 12			JNE			_continueCalcs	; past the first digit, so don't check for sign
+ 0000006C  83 F8 2D			CMP			EAX, MINUS		; compare ascii of first digit with ascii of -
+ 0000006F  75 06			JNE			_checkPlus		; if no - sign present check for + sign
+ 00000071  C6 45 FF 01			MOV			negBool, 1		; - sign present raise the negBool flag
+ 00000075  E2 EB			LOOP		_toIntLoop		; move to next digit, a negative sign was found
 					
- 00000079			_checkPlus:	
+ 00000077			_checkPlus:	
 					
- 00000079  83 FB 2B			CMP			EBX, PLUS		; compare ascii of first digit with ascii of +
- 0000007C  75 02			JNE			_continueCalcs	; if no + sign present
- 0000007E  E2 E2			LOOP		_toIntLoop		; move to next digit, nothing to calculate
+ 00000077  83 F8 2B			CMP			EAX, PLUS		; compare ascii of first digit with ascii of +
+ 0000007A  75 02			JNE			_continueCalcs	; if no + sign present
+ 0000007C  E2 E4			LOOP		_toIntLoop		; move to next digit, nothing to calculate
+
+
+
+ 0000007E			_continueCalcs:
+
+					; checks to see if the digit string is an actual numerical digit
+
+ 0000007E  83 F8 30			CMP			EAX, ZERO
+ 00000081  7C 3B			JL			_invalidItem	;invalid entry ascii was less than ZERO
+ 00000083  83 F8 39			CMP			EAX, NINE
+ 00000086  7F 36			JG			_invalidItem	;invalid entry ascii was greater than NINE
 
 
 
 
-
-
-
-
-
- 00000080			_continueCalcs:
- 00000080  83 E8 30			SUB			EAX, 48			; determines numerical representation of single valid digit
- 00000083  8B D8			MOV			EBX, EAX		; 
- 00000085  A1 00000033 R		MOV			EAX, integerTranslator	; gets the previous calculations
- 0000008A  BA 0000000A			MOV			EDX, 10			; prepare for multiplication
- 0000008F  F7 EA			IMUL		EDX				; 10(previous calculations)
- 00000091  03 C3			ADD			EAX, EBX		; +(49-digit)
- 00000093  A3 00000033 R		MOV			integerTranslator, EAX	; store accumulation
- 00000098  33 C0			XOR			EAX, EAX		; reset eax
+ 00000088  8B D8			MOV			EBX, EAX		; store a copy in EBX
+ 0000008A  83 E8 30			SUB			EAX, 48			; determines numerical representation of single valid digit
+ 0000008D  8B D8			MOV			EBX, EAX		; 
+ 0000008F  A1 00000033 R		MOV			EAX, integerTranslator	; gets the previous calculations
+ 00000094  BA 0000000A			MOV			EDX, 10			; prepare for multiplication
+ 00000099  F7 EA			IMUL		EDX				; 10(previous calculations)
+ 0000009B  03 C3			ADD			EAX, EBX		; +(49-digit)
+ 0000009D  A3 00000033 R		MOV			integerTranslator, EAX	; store accumulation
+ 000000A2  33 C0			XOR			EAX, EAX		; reset eax
 					
- 0000009A  E2 C6			LOOP	_toIntLoop
+ 000000A4  E2 BC			LOOP	_toIntLoop
 
- 0000009C  80 7D FF 01			CMP			negBool, 1
- 000000A0  75 06			JNE			_writeToConsole
- 000000A2  F7 1D 00000033 R		NEG			integerTranslator
+ 000000A6  80 7D FF 01			CMP			negBool, 1
+ 000000AA  75 06			JNE			_writeToConsole
+ 000000AC  F7 1D 00000033 R		NEG			integerTranslator
 
- 000000A8			_writeToConsole:
+ 000000B2			_writeToConsole:
 
- 000000A8  A1 00000033 R		MOV		EAX, integerTranslator
- 000000AD  E8 00000000 E		CALL	WriteInt
+ 000000B2  A1 00000033 R		MOV		EAX, integerTranslator
+ 000000B7  E8 00000000 E		CALL	WriteInt
+ 000000BC  EB 0A			JMP		_return
+
+ 000000BE			_invalidItem:
+ 000000BE  B8 0000270F			MOV		EAX, 9999
+ 000000C3  E8 00000000 E		CALL	WriteDec
+
+ 000000C8			_return:
 					RET
- 000000B2  C9		   *	    leave  
- 000000B3  C3		   *	    ret    00000h
+ 000000C8  C9		   *	    leave  
+ 000000C9  C3		   *	    ret    00000h
 
- 000000B4			convert ENDP
+ 000000CA			convert ENDP
 
 
 
 				; (insert additional procedures here)
 
 				END main
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 14:43:43
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 15:11:54
 5Low level I/O Procedure Program     (Proj6_awanf.asm	     Symbols 2 - 1
 
 
@@ -401,7 +416,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000037 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 000000B4 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000CA Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -512,13 +527,15 @@ WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteVal . . . . . . . . . . . .	P Near	 00000048 _TEXT	Length= 00000000 Public STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-convert  . . . . . . . . . . . .	P Near	 00000048 _TEXT	Length= 0000006C Public STDCALL
+convert  . . . . . . . . . . . .	P Near	 00000048 _TEXT	Length= 00000082 Public STDCALL
   negBool  . . . . . . . . . . .	Byte	 bp - 00000001
   lengthCounter  . . . . . . . .	DWord	 bp - 00000008
   _toIntLoop . . . . . . . . . .	L Near	 00000062 _TEXT	
-  _checkPlus . . . . . . . . . .	L Near	 00000079 _TEXT	
-  _continueCalcs . . . . . . . .	L Near	 00000080 _TEXT	
-  _writeToConsole  . . . . . . .	L Near	 000000A8 _TEXT	
+  _checkPlus . . . . . . . . . .	L Near	 00000077 _TEXT	
+  _continueCalcs . . . . . . . .	L Near	 0000007E _TEXT	
+  _writeToConsole  . . . . . . .	L Near	 000000B2 _TEXT	
+  _invalidItem . . . . . . . . .	L Near	 000000BE _TEXT	
+  _return  . . . . . . . . . . .	L Near	 000000C8 _TEXT	
 main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000000C Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -640,6 +657,7 @@ MENU_EVENT . . . . . . . . . . .	Number	 00000008h
 MINUS  . . . . . . . . . . . . .	Number	 0000002Dh   
 MOUSE_EVENT  . . . . . . . . . .	Number	 00000002h   
 MessageBox . . . . . . . . . . .	Text   	 MessageBoxA
+NINE . . . . . . . . . . . . . .	Number	 00000039h   
 NULL . . . . . . . . . . . . . .	Number	 00000000h   
 NUMLOCK_ON . . . . . . . . . . .	Number	 00000020h   
 OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
@@ -741,6 +759,7 @@ VK_UP  . . . . . . . . . . . . .	Number	 00000026h
 WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h   
 WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
 WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
+ZERO . . . . . . . . . . . . . .	Number	 00000030h   
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
