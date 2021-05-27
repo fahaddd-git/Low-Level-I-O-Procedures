@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/26/21 14:33:11
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 14:43:43
 5Low level I/O Procedure Program     (Proj6_awanf.asm	     Page 1 - 1
 
 
@@ -46,6 +46,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/26/21 14:33:11
 				; returns: user keyboard input stored in storeLocation
 				;		   amount of bytes read in EAX
 				; ---------------------------------------------------------------------------------
+
 				mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, lengthValue:REQ
 					
 
@@ -56,9 +57,9 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/26/21 14:33:11
 					MOV		EDX, promptOffset
 					CALL	WriteString
 					
-					mov edx, storeLocationOffset ; point to the buffer
-					mov ecx, lengthValue+1 ; specify max characters
-					call ReadString ; input the string
+					mov edx, storeLocationOffset	 ; point to the buffer
+					mov ecx, lengthValue+1			 ; specify max characters
+					call ReadString					 ; input the string
 					
 					POP		ECX
 					POP		EDX
@@ -69,68 +70,235 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/26/21 14:33:11
 				; ---------------------------------------------------------------------------------
 				; Name: mDisplayString
 				;
-				; Displays
+				; Displays string in console.
 				;
-				; Preconditions: do not use eax, ecx as arguments
-				; Postconditions: EAX modified
+				; Preconditions: do not use EDX as argument
+				; Postconditions: string at stringOffset printed to console
 				;
 				; Receives: stringOffset = offset of string to display
 				;	
 				;	
-				; returns: user keyboard input stored in storeLocation
-				;		   amount of bytes read in EAX
+				; returns: none
+				;		   
 				; ---------------------------------------------------------------------------------
+
 				mDisplayString MACRO stringOffset:REQ
 					PUSH	EDX
+					
 					MOV		EDX, stringOffset
 					CALL	WriteString
+					
 					POP		EDX
 				ENDM
 
-				; ...
-				; (insert constant definitions here)
+ = 00000003			MAXNUMS=3
+ = 0000002B			PLUS=43
+ = 0000002D			MINUS=45
 
- 00000000			 .data
-
- 00000000 41 42 43 44 45	 testString	BYTE	"ABCDE",0
-	   00
- 00000006  00000005 [		 storedString BYTE	5 DUP(?)
-	    00
+ 00000000			.data
+ 00000000 45 6E 74 65 72		enterNum		BYTE		"Enter a signed number: ",0
+	   20 61 20 73 69
+	   67 6E 65 64 20
+	   6E 75 6D 62 65
+	   72 3A 20 00
+ 00000018  00000003 [			userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
+	    00000000
 	   ]
 
 
-				; (insert variable definitions here)
+ 00000024 2B 31 33 34 35		inString	BYTE	"+1345",0
+	   00
+ 0000002A 00000000			outString	SDWORD	0
+
+ 0000002E  00000005 [			storedString BYTE	5 DUP(?)
+	    00
+	   ]
+ 00000033 00000000			integerTranslator		SDWORD		?
+
+
+
 
  00000000			.code
  00000000			main PROC
 
-					mGetString OFFSET testString,  OFFSET storedString, 5
- 00000000		     1	.code
- 00000000  52		     1		PUSH	EDX
- 00000001  51		     1		PUSH	ECX
- 00000002  BA 00000000 R     1		MOV		EDX, OFFSET testString
- 00000007  E8 00000000 E     1		CALL	WriteString
- 0000000C  BA 00000006 R     1		mov edx, OFFSET storedString ; point to the buffer
- 00000011  B9 00000006	     1		mov ecx, 5+1 ; specify max characters
- 00000016  E8 00000000 E     1		call ReadString ; input the string
- 0000001B  59		     1		POP		ECX
- 0000001C  5A		     1		POP		EDX
-					mDisplayString		OFFSET	 storedString
- 0000001D  52		     1		PUSH	EDX
- 0000001E  BA 00000006 R     1		MOV		EDX, OFFSET	 storedString
- 00000023  E8 00000000 E     1		CALL	WriteString
- 00000028  5A		     1		POP		EDX
+					;mGetString			OFFSET testString,  OFFSET storedString, 5
+					;mDisplayString		OFFSET	 storedString
+					
+					;PUSH	MAXNUMS
+					;PUSH	OFFSET userStrings
+					;CALL	ReadVal
+ 00000000  E8 00000043			CALL	convert
 
 
 					Invoke ExitProcess,0	; exit to operating system
- 00000029  6A 00	   *	    push   +000000000h
- 0000002B  E8 00000000 E   *	    call   ExitProcess
- 00000030			main ENDP
+ 00000005  6A 00	   *	    push   +000000000h
+ 00000007  E8 00000000 E   *	    call   ExitProcess
+ 0000000C			main ENDP
+
+
+
+				; ---------------------------------------------------------------------------------
+				; Name: ReadVal
+				; 
+				; Converts a string of digits into a signed integerTranslator. 
+				;
+				; Preconditions: 
+				;
+				; Postconditions: 
+				;
+				; Receives: 
+				; [ebp+16] = type of array element
+				; [ebp+12] = length of array
+				; [ebp+8] = address of array
+				; arrayMsg, arrayError are global variables
+				;
+				; returns: eax = smallest integerTranslator
+				; ---------------------------------------------------------------------------------
+ 0000000C			ReadVal PROC
+					;LOCAL	integerTranslator:DWORD
+					
+ 0000000C  55				PUSH	EBP
+ 0000000D  8B EC			MOV		EBP, ESP
+
+ 0000000F  8B 7D 08			MOV		EDI, [EBP+8]  ;userStrings array
+ 00000012  8B 4D 0C			MOV		ECX, [EBP+12] ;MAXNUMS
+
+					;prompts and fills userStrings array with input
+ 00000015			_promptLoop:
+
+					mGetString	OFFSET enterNum, EDI, 16
+ 00000015		     1	.code
+ 00000015  52		     1		PUSH	EDX
+ 00000016  51		     1		PUSH	ECX
+ 00000017  BA 00000000 R     1		MOV		EDX, OFFSET enterNum
+ 0000001C  E8 00000000 E     1		CALL	WriteString
+ 00000021  8B D7	     1		mov edx, EDI	 ; point to the buffer
+ 00000023  B9 00000011	     1		mov ecx, 16+1			 ; specify max characters
+ 00000028  E8 00000000 E     1		call ReadString					 ; input the string
+ 0000002D  59		     1		POP		ECX
+ 0000002E  5A		     1		POP		EDX
+ 0000002F  83 C7 04			ADD			EDI, 4
+ 00000032  E2 E1			LOOP		_promptLoop
+
+					; at this point, userStrings array filled with input strings unvalidated
+
+
+					; prints the userStrings strings array
+					
+ 00000034  8B 4D 0C			MOV			ECX, [EBP+12] ;MAXNUMS
+ 00000037  8B 55 08			MOV			EDX, [EBP+8]	;userStrings array
+
+
+ 0000003A			_printLoop:
+
+ 0000003A  E8 00000000 E		CALL	WriteString
+ 0000003F  83 C2 04			ADD		EDX, 4
+ 00000042  E2 F6			LOOP	_printLoop
+
+
+
+
+
+
+
+
+ 00000044  5D				POP		EBP
+ 00000045  C2 0008			RET		8
+
+
+ 00000048			ReadVal ENDP
+
+
+
+
+
+
+
+
+
+
+
+ 00000048			WriteVal PROC
+ 00000048			WriteVal ENDP
+
+
+
+ 00000048			convert PROC
+				LOCAL		negBool:BYTE, lengthCounter:DWORD
+
+ 00000048  55		   *	    push   ebp
+ 00000049  8B EC	   *	    mov    ebp, esp
+ 0000004B  83 C4 F8	   *	    add    esp, 0FFFFFFF8h
+ 0000004E  BE 00000024 R		MOV		   ESI, OFFSET inString
+					;MOV		   EDI, OFFSET	outString
+
+ 00000053  B9 00000005			MOV		   ECX, LENGTHOF inString  -1  ;"109"
+ 00000058  33 C0			XOR			EAX, EAX	; clear accumulator for conversion
+ 0000005A  C7 45 F8			MOV			lengthCounter, 0
+	   00000000
+					
+ 00000061  FC				CLD
+
+ 00000062			_toIntLoop:
+ 00000062  AC				LODSB						; load string digit from inString into AL
+
+ 00000063  8B D8			MOV			EBX, EAX		; store a copy in EBX
+
+
+ 00000065  FF 45 F8			INC			lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
+ 00000068  83 7D F8 01			CMP			lengthCounter, 1
+ 0000006C  75 12			JNE			_continueCalcs	; past the first digit, so don't check for sign
+ 0000006E  83 FB 2D			CMP			EBX, MINUS		; compare ascii of first digit with ascii of -
+ 00000071  75 06			JNE			_checkPlus		; if no - sign present check for + sign
+ 00000073  C6 45 FF 01			MOV			negBool, 1		; - sign present raise the negBool flag
+ 00000077  E2 E9			LOOP		_toIntLoop		; move to next digit, a negative sign was found
+					
+ 00000079			_checkPlus:	
+					
+ 00000079  83 FB 2B			CMP			EBX, PLUS		; compare ascii of first digit with ascii of +
+ 0000007C  75 02			JNE			_continueCalcs	; if no + sign present
+ 0000007E  E2 E2			LOOP		_toIntLoop		; move to next digit, nothing to calculate
+
+
+
+
+
+
+
+
+
+ 00000080			_continueCalcs:
+ 00000080  83 E8 30			SUB			EAX, 48			; determines numerical representation of single valid digit
+ 00000083  8B D8			MOV			EBX, EAX		; 
+ 00000085  A1 00000033 R		MOV			EAX, integerTranslator	; gets the previous calculations
+ 0000008A  BA 0000000A			MOV			EDX, 10			; prepare for multiplication
+ 0000008F  F7 EA			IMUL		EDX				; 10(previous calculations)
+ 00000091  03 C3			ADD			EAX, EBX		; +(49-digit)
+ 00000093  A3 00000033 R		MOV			integerTranslator, EAX	; store accumulation
+ 00000098  33 C0			XOR			EAX, EAX		; reset eax
+					
+ 0000009A  E2 C6			LOOP	_toIntLoop
+
+ 0000009C  80 7D FF 01			CMP			negBool, 1
+ 000000A0  75 06			JNE			_writeToConsole
+ 000000A2  F7 1D 00000033 R		NEG			integerTranslator
+
+ 000000A8			_writeToConsole:
+
+ 000000A8  A1 00000033 R		MOV		EAX, integerTranslator
+ 000000AD  E8 00000000 E		CALL	WriteInt
+					RET
+ 000000B2  C9		   *	    leave  
+ 000000B3  C3		   *	    ret    00000h
+
+ 000000B4			convert ENDP
+
+
 
 				; (insert additional procedures here)
 
 				END main
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/26/21 14:33:11
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    05/27/21 14:43:43
 5Low level I/O Procedure Program     (Proj6_awanf.asm	     Symbols 2 - 1
 
 
@@ -232,8 +400,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000000B Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000030 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000037 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000B4 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -303,6 +471,9 @@ ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 ReadKeyFlush . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadKey  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadVal  . . . . . . . . . . . .	P Near	 0000000C _TEXT	Length= 0000003C Public STDCALL
+  _promptLoop  . . . . . . . . .	L Near	 00000015 _TEXT	
+  _printLoop . . . . . . . . . .	L Near	 0000003A _TEXT	
 SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -339,8 +510,16 @@ WriteStackFrameName  . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteVal . . . . . . . . . . . .	P Near	 00000048 _TEXT	Length= 00000000 Public STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000030 Public STDCALL
+convert  . . . . . . . . . . . .	P Near	 00000048 _TEXT	Length= 0000006C Public STDCALL
+  negBool  . . . . . . . . . . .	Byte	 bp - 00000001
+  lengthCounter  . . . . . . . .	DWord	 bp - 00000008
+  _toIntLoop . . . . . . . . . .	L Near	 00000062 _TEXT	
+  _checkPlus . . . . . . . . . .	L Near	 00000079 _TEXT	
+  _continueCalcs . . . . . . . .	L Near	 00000080 _TEXT	
+  _writeToConsole  . . . . . . .	L Near	 000000A8 _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000000C Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -432,6 +611,7 @@ KEY_EVENT  . . . . . . . . . . .	Number	 00000001h
 KEY_MASKS  . . . . . . . . . . .	Number	 0000001Fh   
 LEFT_ALT_PRESSED . . . . . . . .	Number	 00000002h   
 LEFT_CTRL_PRESSED  . . . . . . .	Number	 00000008h   
+MAXNUMS  . . . . . . . . . . . .	Number	 00000003h   
 MB_ABORTRETRYIGNORE  . . . . . .	Number	 00000002h   
 MB_APPLMODAL . . . . . . . . . .	Number	 00000000h   
 MB_CANCELTRYCONTINUE . . . . . .	Number	 00000006h   
@@ -457,12 +637,14 @@ MB_USERICON  . . . . . . . . . .	Number	 00000080h
 MB_YESNOCANCEL . . . . . . . . .	Number	 00000003h   
 MB_YESNO . . . . . . . . . . . .	Number	 00000004h   
 MENU_EVENT . . . . . . . . . . .	Number	 00000008h   
+MINUS  . . . . . . . . . . . . .	Number	 0000002Dh   
 MOUSE_EVENT  . . . . . . . . . .	Number	 00000002h   
 MessageBox . . . . . . . . . . .	Text   	 MessageBoxA
 NULL . . . . . . . . . . . . . .	Number	 00000000h   
 NUMLOCK_ON . . . . . . . . . . .	Number	 00000020h   
 OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
 OPEN_EXISTING  . . . . . . . . .	Number	 00000003h   
+PLUS . . . . . . . . . . . . . .	Number	 0000002Bh   
 PeekConsoleInput . . . . . . . .	Text   	 PeekConsoleInputA
 RIGHT_ALT_PRESSED  . . . . . . .	Number	 00000001h   
 RIGHT_CTRL_PRESSED . . . . . . .	Number	 00000004h   
@@ -563,9 +745,12 @@ black  . . . . . . . . . . . . .	Number	 00000000h
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
+enterNum . . . . . . . . . . . .	Byte	 00000000 _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
+inString . . . . . . . . . . . .	Byte	 00000024 _DATA	
+integerTranslator  . . . . . . .	DWord	 00000033 _DATA	
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
 lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
 lightGray  . . . . . . . . . . .	Number	 00000007h   
@@ -573,9 +758,10 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
+outString  . . . . . . . . . . .	DWord	 0000002A _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-storedString . . . . . . . . . .	Byte	 00000006 _DATA	
-testString . . . . . . . . . . .	Byte	 00000000 _DATA	
+storedString . . . . . . . . . .	Byte	 0000002E _DATA	
+userStrings  . . . . . . . . . .	DWord	 00000018 _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   

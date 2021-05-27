@@ -25,6 +25,7 @@ INCLUDE Irvine32.inc
 ; returns: user keyboard input stored in storeLocation
 ;		   amount of bytes read in EAX
 ; ---------------------------------------------------------------------------------
+
 mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, lengthValue:REQ
 	
 
@@ -35,9 +36,9 @@ mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, lengthValue:REQ
 	MOV		EDX, promptOffset
 	CALL	WriteString
 	
-	mov edx, storeLocationOffset ; point to the buffer
-	mov ecx, lengthValue+1 ; specify max characters
-	call ReadString ; input the string
+	mov edx, storeLocationOffset	 ; point to the buffer
+	mov ecx, lengthValue+1			 ; specify max characters
+	call ReadString					 ; input the string
 	
 	POP		ECX
 	POP		EDX
@@ -48,44 +49,206 @@ ENDM
 ; ---------------------------------------------------------------------------------
 ; Name: mDisplayString
 ;
-; Displays
+; Displays string in console.
 ;
-; Preconditions: do not use eax, ecx as arguments
-; Postconditions: EAX modified
+; Preconditions: do not use EDX as argument
+; Postconditions: string at stringOffset printed to console
 ;
 ; Receives: stringOffset = offset of string to display
 ;	
 ;	
-; returns: user keyboard input stored in storeLocation
-;		   amount of bytes read in EAX
+; returns: none
+;		   
 ; ---------------------------------------------------------------------------------
+
 mDisplayString MACRO stringOffset:REQ
 	PUSH	EDX
+	
 	MOV		EDX, stringOffset
 	CALL	WriteString
+	
 	POP		EDX
 ENDM
 
-; ...
-; (insert constant definitions here)
+MAXNUMS=3
+PLUS=43
+MINUS=45
+ZERO=48
+NINE=57
 
- .data
+.data
+	enterNum		BYTE		"Enter a signed number: ",0
+	userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
 
- testString	BYTE	"ABCDE",0
- storedString BYTE	5 DUP(?)
+
+	inString	BYTE	"+1345",0
+	outString	SDWORD	0
+
+	storedString BYTE	5 DUP(?)
+	integerTranslator		SDWORD		?
 
 
-; (insert variable definitions here)
+
 
 .code
 main PROC
 
-	mGetString			OFFSET testString,  OFFSET storedString, 5
-	mDisplayString		OFFSET	 storedString
+	;mGetString			OFFSET testString,  OFFSET storedString, 5
+	;mDisplayString		OFFSET	 storedString
+	
+	;PUSH	MAXNUMS
+	;PUSH	OFFSET userStrings
+	;CALL	ReadVal
+	CALL	convert
 
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
+
+
+
+; ---------------------------------------------------------------------------------
+; Name: ReadVal
+; 
+; Converts a string of digits into a signed integerTranslator. 
+;
+; Preconditions: 
+;
+; Postconditions: 
+;
+; Receives: 
+; [ebp+16] = type of array element
+; [ebp+12] = length of array
+; [ebp+8] = address of array
+; arrayMsg, arrayError are global variables
+;
+; returns: eax = smallest integerTranslator
+; ---------------------------------------------------------------------------------
+ReadVal PROC
+	;LOCAL	integerTranslator:DWORD
+	
+	PUSH	EBP
+	MOV		EBP, ESP
+
+	MOV		EDI, [EBP+8]  ;userStrings array
+	MOV		ECX, [EBP+12] ;MAXNUMS
+
+	;prompts and fills userStrings array with input
+_promptLoop:
+
+	mGetString	OFFSET enterNum, EDI, 16
+	ADD			EDI, 4
+	LOOP		_promptLoop
+
+	; at this point, userStrings array filled with input strings unvalidated
+
+
+	; prints the userStrings strings array
+	
+	MOV			ECX, [EBP+12] ;MAXNUMS
+	MOV			EDX, [EBP+8]	;userStrings array
+
+
+_printLoop:
+
+	CALL	WriteString
+	ADD		EDX, 4
+	LOOP	_printLoop
+
+
+
+
+
+
+
+
+	POP		EBP
+	RET		8
+
+
+ReadVal ENDP
+
+
+
+
+
+
+
+
+
+
+
+WriteVal PROC
+WriteVal ENDP
+
+
+
+convert PROC
+LOCAL		negBool:BYTE, lengthCounter:DWORD
+
+	MOV		   ESI, OFFSET inString
+	;MOV		   EDI, OFFSET	outString
+
+	MOV		   ECX, LENGTHOF inString  -1  ;"109"
+	XOR			EAX, EAX	; clear accumulator for conversion
+	MOV			lengthCounter, 0
+	
+	CLD
+
+_toIntLoop:
+	LODSB						; load string digit from inString into AL
+
+	MOV			EBX, EAX		; store a copy in EBX
+
+	; this all gets skipped after first digit checked for sign
+
+	INC			lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
+	CMP			lengthCounter, 1
+	JNE			_continueCalcs	; past the first digit, so don't check for sign
+	CMP			EBX, MINUS		; compare ascii of first digit with ascii of -
+	JNE			_checkPlus		; if no - sign present check for + sign
+	MOV			negBool, 1		; - sign present raise the negBool flag
+	LOOP		_toIntLoop		; move to next digit, a negative sign was found
+	
+_checkPlus:	
+	
+	CMP			EBX, PLUS		; compare ascii of first digit with ascii of +
+	JNE			_continueCalcs	; if no + sign present
+	LOOP		_toIntLoop		; move to next digit, nothing to calculate
+
+
+
+_continueCalcs:
+
+	
+
+
+
+
+	SUB			EAX, 48			; determines numerical representation of single valid digit
+	MOV			EBX, EAX		; 
+	MOV			EAX, integerTranslator	; gets the previous calculations
+	MOV			EDX, 10			; prepare for multiplication
+	IMUL		EDX				; 10(previous calculations)
+	ADD			EAX, EBX		; +(49-digit)
+	MOV			integerTranslator, EAX	; store accumulation
+	XOR			EAX, EAX		; reset eax
+	
+	LOOP	_toIntLoop
+
+	CMP			negBool, 1
+	JNE			_writeToConsole
+	NEG			integerTranslator
+
+_writeToConsole:
+
+	MOV		EAX, integerTranslator
+	CALL	WriteInt
+	RET
+
+convert ENDP
+
+
 
 ; (insert additional procedures here)
 
