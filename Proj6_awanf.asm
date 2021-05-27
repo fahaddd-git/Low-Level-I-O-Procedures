@@ -81,7 +81,7 @@ NINE=57
 	userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
 
 
-	inString	BYTE	"1345",0
+	inString	BYTE	"1235",0
 	outString	SDWORD	0
 
 	storedString BYTE	5 DUP(?)
@@ -236,14 +236,19 @@ _continueCalcs:
 	MOV			EDX, 10			; prepare for multiplication
 	IMUL		EDX				; 10(previous calculations)
 	ADD			EAX, EBX		; +(49-digit)
+	
+	JO			_invalidItem		; checks for overflow flag
+
 	MOV			integerTranslator, EAX	; store accumulation
 	XOR			EAX, EAX		; reset eax
-	
+
+
 	LOOP	_toIntLoop
 
 	CMP			negBool, 1
 	JNE			_writeToConsole
 	NEG			integerTranslator
+
 
 _writeToConsole:
 
