@@ -96,6 +96,9 @@ NINE=57
 
 	indexer			DWORD	0
 
+	testNum			SDWORD		2147483647		
+	outputString	BYTE		10 DUP(?)
+	otherString		BYTE		"Hope this doesn't print",0
 
 
 
@@ -104,29 +107,31 @@ NINE=57
 main PROC
 
 	; gets and converts MAXNUMS strings to an array of integers
-	PUSH	OFFSET intArray
-	MOV		ECX, MAXNUMS		; amount of strings to gather from user
-_getNums:
-	CALL	ReadVal
-	LOOP	_getNums
+;	PUSH	OFFSET intArray
+;	MOV		ECX, MAXNUMS		; amount of strings to gather from user
+;_getNums:
+;	CALL	ReadVal
+;	LOOP	_getNums
+;
+;
+;
+;	; prints array for testing purposes
+;
+;	MOV		EDI, OFFSET intArray
+;	MOV		ECX, LENGTHOF intArray
+;
+;_printArray:
+;	MOV		EAX, [EDI]
+;	CALL	WriteInt
+;	MOV		AL, " "
+;	CALL	WriteChar
+;	ADD		EDI, 4
+;	LOOP	_printArray
+;
+;	PUSH	OFFSET intArray
+;	CALL	math
 
-
-
-	; prints array for testing purposes
-
-	MOV		EDI, OFFSET intArray
-	MOV		ECX, LENGTHOF intArray
-
-_printArray:
-	MOV		EAX, [EDI]
-	CALL	WriteInt
-	MOV		AL, ","
-	CALL	WriteChar
-	ADD		EDI, 4
-	LOOP	_printArray
-
-	PUSH	OFFSET intArray
-	CALL	math
+	CALL	WriteVal
 	
 
 
@@ -298,6 +303,14 @@ _sumLoop:
 	CALL	CrLf
 	CALL	WriteInt
 
+	; calc/display avg
+
+	CDQ			; sign extend
+	MOV		EBX, MAXNUMS
+	IDIV	EBX
+	CALL	CrLf
+	CALL	WriteInt
+
 
 
 	POP		EBP
@@ -306,7 +319,62 @@ _sumLoop:
 math ENDP
 
 
+WriteVal PROC
 
+	LOCAL		temporary:DWORD
+
+	PUSH	EBP
+	MOV		EBP, ESP
+; testString sdword 12345
+;outputString byte 5 dup(?)
+
+	
+
+	MOV		EDI, OFFSET	outputString
+	ADD		EDI, LENGTHOF outputString	; edi now points at end of outputstring
+
+;	MOV		ECX, LENGTHOF testNum
+	
+	STD					; set flag so pointer moves backwards
+	MOV		AL, 0
+	STOSB
+	
+	MOV		ECX, LENGTHOF outputString	
+
+	MOV		EAX, testNum
+	MOV		EBX, 10		; divisor
+
+_stringLoop:
+
+;	XOR		EDX, EDX
+
+	CDQ					; prep div
+
+	IDIV	EBX
+	PUSH	EAX
+;	MOV		temporary, EDX
+	MOV		AL, DL;BYTE ptr temporary
+	ADD		AL, 48
+
+	STOSB
+	POP		EAX
+	CMP		EAX, 0
+	JE		_stringComplete
+
+
+
+	LOOP	_stringLoop
+
+_stringComplete:
+
+	mDisplayString	offset outputString
+
+
+
+	POP		EBP
+	RET
+
+WriteVal ENDP
 
 
 
