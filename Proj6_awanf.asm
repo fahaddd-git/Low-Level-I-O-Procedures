@@ -62,6 +62,7 @@ ENDM
 ; ---------------------------------------------------------------------------------
 
 mDisplayString MACRO stringOffset:REQ
+
 	PUSH	EDX
 	
 	MOV		EDX, stringOffset
@@ -70,7 +71,11 @@ mDisplayString MACRO stringOffset:REQ
 	POP		EDX
 ENDM
 
-MAXNUMS=1
+
+; amount of integers to prompt/display
+MAXNUMS=3
+
+; ASCII codes
 PLUS=43
 MINUS=45
 ZERO=48
@@ -79,14 +84,14 @@ NINE=57
 .data
 	enterNum		BYTE		"Enter a signed number: ",0
 	userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
+	errorMsg		BYTE		"ERROR: Number too large or invalid",0
 
 
 	;inString	BYTE	"5",0
 	;outString	SDWORD	0
 
 	storedString			BYTE	16 DUP(?) ; 
-	integerTranslator		SDWORD		?
-	charLength				DWORD		?
+	intHolder			SDWORD		?
 
 
 
@@ -96,11 +101,25 @@ main PROC
 
 	;mGetString			OFFSET testString,  OFFSET storedString, 5
 	;mDisplayString		OFFSET	 storedString
+
 	
-	PUSH	MAXNUMS
-	PUSH	OFFSET userStrings
+	;PUSH	OFFSET intHolder
+;	PUSH	MAXNUMS
+;	PUSH	OFFSET userStrings
+
+
+	MOV		ECX, MAXNUMS		; amount of strings to gather from user
+
+_getNums:
+
+
 	CALL	ReadVal
-	CALL	convert
+	
+
+
+	LOOP	_getNums
+	
+	
 
 
 	Invoke ExitProcess,0	; exit to operating system
@@ -126,43 +145,22 @@ main ENDP
 ; returns: eax = smallest integerTranslator
 ; ---------------------------------------------------------------------------------
 ReadVal PROC
-	;LOCAL	integerTranslator:DWORD
+
 	
+	LOCAL		negBool:BYTE, lengthCounter:DWORD, intAccumulator:SDWORD 
+
 	PUSH	EBP
 	MOV		EBP, ESP
+	PUSH	ECX
 
-	MOV		EDI, [EBP+8]  ;userStrings array
-	MOV		ECX, MAXNUMS
+
+;	MOV		EDI, [EBP+8]  ;userStrings array
+;	MOV		ECX, MAXNUMS
 
 	;prompts and fills userStrings array with input
-_promptLoop:
+;_promptLoop:
 
-	mGetString	OFFSET enterNum, OFFSET storedString, LENGTHOF storedString
-	MOV		charLength, EAX
-	
-	;MOV		EDX, OFFSET storedString
-	;CALL	WriteString
-	;CALL		convert	
-	
-	;ADD			EDI, 4
-	LOOP		_promptLoop
-
-	; at this point, userStrings array filled with input strings unvalidated
-
-
-	; prints the userStrings strings array
-	
-;	MOV			ECX,  [EBP+12] ;MAXNUMS
-;	MOV			EDX, [EBP+8]	;userStrings array
-
-
-;_printLoop:
-
-;	CALL	WriteString
-;	MOV		AL, ","
-;	CALL	WriteChar
-;	ADD		EDX, 4
-;	LOOP	_printLoop
+	mGetString	OFFSET enterNum, OFFSET storedString, LENGTHOF storedString   ;need to get these from stack
 
 
 
@@ -171,47 +169,15 @@ _promptLoop:
 
 
 
-	POP		EBP
-	RET		12
-
-
-ReadVal ENDP
-
-
-
-
-
-
-
-
-
-
-
-WriteVal PROC
-WriteVal ENDP
-
-
-
-convert PROC
-
-LOCAL		negBool:BYTE, lengthCounter:DWORD
-
+	MOV			intAccumulator, 0 
 	MOV			ESI, OFFSET storedString
-	;MOV		EDI, OFFSET	outString
-
-
-	MOV			ECX, LENGTHOF storedString    ;""
-
-
-
+	MOV			ECX, LENGTHOF storedString    
 	XOR			EAX, EAX	; clear accumulator for conversion
 	MOV			lengthCounter, 0
-	
 	CLD
 
 _toIntLoop:
 	LODSB						; load string digit from inString into AL
-
 
 	; this all gets skipped after first digit checked for sign
 
@@ -249,19 +215,15 @@ _continueCalcs:
 	MOV			EBX, EAX		; store a copy in EBX
 	SUB			EAX, 48			; determines numerical representation of single valid digit
 	MOV			EBX, EAX		; 
-	MOV			EAX, integerTranslator	; gets the previous calculations
+	MOV			EAX, intAccumulator	; gets the previous calculations
 	MOV			EDX, 10			; prepare for multiplication
 	IMUL		EDX				; 10(previous calculations)
 	
 	JO			_invalidItem		; checks for overflow flag
 
 	ADD			EAX, EBX		; +(49-digit)
-	
-
-	MOV			integerTranslator, EAX	; store accumulation
-
+	MOV			intAccumulator, EAX	; store accumulation
 	XOR			EAX, EAX		; reset eax
-
 
 	LOOP	_toIntLoop
 
@@ -269,25 +231,47 @@ _endCalculations:
 
 	CMP			negBool, 1
 	JNE			_writeToConsole
-	NEG			integerTranslator		; negBool was raised, negate the number
-
+	NEG			intAccumulator		; negBool was raised, negate the number
+	MOV			negBool, 0
 
 _writeToConsole:
 
-	MOV		EAX, integerTranslator
+	MOV		EAX, intAccumulator
 	CALL	WriteInt
+	CALL	CrLf
 	JMP		_return
 
 	; invalid entry 
 
 _invalidItem:
-	MOV		EAX, 11111
-	CALL	WriteDec
+	MOV		EDX, OFFSET errorMsg
+	CALL	WriteString
+	CALL	CrLf
 
 _return:
-	RET 
 
-convert ENDP
+	MOV		intHolder,	EAX
+	CALL	WriteInt
+	
+	POP	ECX
+	POP	EBP
+	
+	RET 
+ReadVal ENDP
+
+
+
+
+
+
+;WriteVal PROC
+;WriteVal ENDP
+
+
+
+;convert PROC
+
+
 
 
 
