@@ -83,15 +83,19 @@ NINE=57
 
 .data
 	enterNum		BYTE		"Enter a signed number: ",0
-	userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
 	errorMsg		BYTE		"ERROR: Number too large or invalid",0
 
 
 	;inString	BYTE	"5",0
 	;outString	SDWORD	0
 
-	storedString			BYTE	16 DUP(?) ; 
+	storedString		BYTE	16 DUP(?) 
 	intHolder			SDWORD		?
+
+	intArray			SDWORD		MAXNUMS DUP(?)				; array of entered strings
+
+	indexer			DWORD	0
+
 
 
 
@@ -103,7 +107,7 @@ main PROC
 	;mDisplayString		OFFSET	 storedString
 
 	
-	;PUSH	OFFSET intHolder
+	PUSH	OFFSET intArray
 ;	PUSH	MAXNUMS
 ;	PUSH	OFFSET userStrings
 
@@ -118,6 +122,24 @@ _getNums:
 
 
 	LOOP	_getNums
+
+
+
+
+
+
+	MOV		EDI, OFFSET intArray
+	MOV		ECX, LENGTHOF intArray
+
+_printArray:
+	MOV		EAX, [EDI]
+	CALL	WriteInt
+	MOV		AL, ","
+	CALL	WriteChar
+	ADD		EDI, 4
+	LOOP	_printArray
+
+
 	
 	
 
@@ -151,22 +173,14 @@ ReadVal PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
+	
 	PUSH	ECX
-
-
-;	MOV		EDI, [EBP+8]  ;userStrings array
-;	MOV		ECX, MAXNUMS
+;	PUSH	EDI
 
 	;prompts and fills userStrings array with input
-;_promptLoop:
 
+_rePrompt:
 	mGetString	OFFSET enterNum, OFFSET storedString, LENGTHOF storedString   ;need to get these from stack
-
-
-
-
-
-
 
 
 	MOV			intAccumulator, 0 
@@ -209,9 +223,6 @@ _continueCalcs:
 	JG			_invalidItem	;invalid entry ascii was greater than NINE
 	
 
-
-
-
 	MOV			EBX, EAX		; store a copy in EBX
 	SUB			EAX, 48			; determines numerical representation of single valid digit
 	MOV			EBX, EAX		; 
@@ -232,7 +243,7 @@ _endCalculations:
 	CMP			negBool, 1
 	JNE			_writeToConsole
 	NEG			intAccumulator		; negBool was raised, negate the number
-	MOV			negBool, 0
+	MOV			negBool, 0			; reset negBool
 
 _writeToConsole:
 
@@ -241,40 +252,71 @@ _writeToConsole:
 	CALL	CrLf
 	JMP		_return
 
-	; invalid entry 
+	; invalid entries 
 
 _invalidItem:
 	MOV		EDX, OFFSET errorMsg
 	CALL	WriteString
 	CALL	CrLf
+	JMP		_rePrompt		; prompt user again for valid input
 
-_return:
+_return:					; TODO: save the SDWORD into an array
 
-	MOV		intHolder,	EAX
-	CALL	WriteInt
+
+
+		; stores the valid input in the intArray array as SDWORDS
+
+	MOV		intHolder,	EAX				; TODO: needs fixing, uses globals
+
+	MOV		EDI, OFFSET intArray
+	ADD		EDI, indexer
+	MOV		ESI, intHolder
+	MOV		[EDI], ESI
 	
+	ADD		indexer, 4
+
+
+
+
+
+
+
+
+
 	POP	ECX
 	POP	EBP
-	
-	RET 
+
+
+_theEnd:	
+	RET 4
 ReadVal ENDP
 
 
 
+writeArray PROC
+
+	PUSH	EBP
+	MOV		EBP, ESP
+	
+	MOV		EAX, [EBP+8]		;intHolder
+	CALL	WriteInt
+
+	MOV		EDI, OFFSET intArray
+	MOV		ESI, EAX
+
+	MOV		[EDI], ESI
+
+	ADD		EDI, 4
 
 
 
-;WriteVal PROC
-;WriteVal ENDP
-
-
-
-;convert PROC
+	POP	EBP
+	RET 4
+writeArray ENDP
 
 
 
 
 
-; (insert additional procedures here)
 
 END main
