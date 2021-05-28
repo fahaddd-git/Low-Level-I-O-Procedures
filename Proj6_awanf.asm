@@ -81,12 +81,12 @@ NINE=57
 	userStrings		DWORD		MAXNUMS DUP(?)				; array of entered strings
 
 
-	inString	BYTE	"5",0
-	outString	SDWORD	0
+	;inString	BYTE	"5",0
+	;outString	SDWORD	0
 
-	storedString BYTE	11 DUP(?) ; 10 digits max
+	storedString			BYTE	16 DUP(?) ; 
 	integerTranslator		SDWORD		?
-	charLength	DWORD		?
+	charLength				DWORD		?
 
 
 
@@ -140,8 +140,8 @@ _promptLoop:
 	mGetString	OFFSET enterNum, OFFSET storedString, LENGTHOF storedString
 	MOV		charLength, EAX
 	
-	MOV		EDX, OFFSET storedString
-	CALL	WriteString
+	;MOV		EDX, OFFSET storedString
+	;CALL	WriteString
 	;CALL		convert	
 	
 	;ADD			EDI, 4
@@ -199,7 +199,11 @@ LOCAL		negBool:BYTE, lengthCounter:DWORD
 	MOV			ESI, OFFSET storedString
 	;MOV		EDI, OFFSET	outString
 
-	MOV			ECX, LENGTHOF storedString  -1  ;"109"
+
+	MOV			ECX, LENGTHOF storedString    ;""
+
+
+
 	XOR			EAX, EAX	; clear accumulator for conversion
 	MOV			lengthCounter, 0
 	
@@ -248,11 +252,14 @@ _continueCalcs:
 	MOV			EAX, integerTranslator	; gets the previous calculations
 	MOV			EDX, 10			; prepare for multiplication
 	IMUL		EDX				; 10(previous calculations)
-	ADD			EAX, EBX		; +(49-digit)
 	
 	JO			_invalidItem		; checks for overflow flag
 
+	ADD			EAX, EBX		; +(49-digit)
+	
+
 	MOV			integerTranslator, EAX	; store accumulation
+
 	XOR			EAX, EAX		; reset eax
 
 
@@ -274,7 +281,7 @@ _writeToConsole:
 	; invalid entry 
 
 _invalidItem:
-	MOV		EAX, 9999
+	MOV		EAX, 11111
 	CALL	WriteDec
 
 _return:
