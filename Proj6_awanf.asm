@@ -103,30 +103,16 @@ NINE=57
 .code
 main PROC
 
-	;mGetString			OFFSET testString,  OFFSET storedString, 5
-	;mDisplayString		OFFSET	 storedString
-
-	
+	; gets and converts MAXNUMS strings to an array of integers
 	PUSH	OFFSET intArray
-;	PUSH	MAXNUMS
-;	PUSH	OFFSET userStrings
-
-
 	MOV		ECX, MAXNUMS		; amount of strings to gather from user
-
 _getNums:
-
-
 	CALL	ReadVal
-	
-
-
 	LOOP	_getNums
 
 
 
-
-
+	; prints array for testing purposes
 
 	MOV		EDI, OFFSET intArray
 	MOV		ECX, LENGTHOF intArray
@@ -139,8 +125,8 @@ _printArray:
 	ADD		EDI, 4
 	LOOP	_printArray
 
-
-	
+	PUSH	OFFSET intArray
+	CALL	math
 	
 
 
@@ -293,26 +279,32 @@ ReadVal ENDP
 
 
 
-writeArray PROC
+; calculates sum and average
+math PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
+
+	MOV		ECX, MAXNUMS	; loop maxnums times
+	MOV		ESI, [EBP+8]	; intArray offset
+	XOR		EAX, EAX		; prepare for accumulation
+
+_sumLoop:
 	
-	MOV		EAX, [EBP+8]		;intHolder
+	ADD		EAX, [ESI]
+	ADD		ESI, 4
+	LOOP	_sumLoop
+
+	CALL	CrLf
 	CALL	WriteInt
 
-	MOV		EDI, OFFSET intArray
-	MOV		ESI, EAX
-
-	MOV		[EDI], ESI
-
-	ADD		EDI, 4
 
 
+	POP		EBP
+	RET		8
 
-	POP	EBP
-	RET 4
-writeArray ENDP
+math ENDP
+
 
 
 
