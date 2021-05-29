@@ -81,6 +81,8 @@ MINUS=45
 ZERO=48
 NINE=57
 
+MAXSIZE= 2147483647
+
 .data
 	enterNum		BYTE		"Enter a signed number: ",0
 	errorMsg		BYTE		"ERROR: Number too large or invalid",0
@@ -96,10 +98,10 @@ NINE=57
 
 	indexer			DWORD	0
 
-	testNum			SDWORD		-1123		
-	outputString	BYTE		15 DUP(?)
+	testNum			SDWORD		-1	
+	outputString	BYTE		16 DUP(?)
 	otherString		BYTE		"Hope this doesn't print",0
-	reversedString	BYTE		15 DUP(?)
+	reversedString	BYTE		16 DUP(?)
 
 
 
@@ -336,21 +338,11 @@ WriteVal PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
-	
-	;MOV		EBX, intHolder;[EBP+12]	;from ReadVal. intHolder SDWORD int
-	;MOV		EAX, [EBX]
-	;MOV		EAX,  [EBP+8] ;from ReadVal. length of user input
-
-; testString sdword 12345
-;outputString byte 5 dup(?)
 
 	
 	MOV		EDI, OFFSET outputString;outputString
-	;ADD		EDI, LENGTHOF outputString-1	; edi now points at end of outputstring
 
-;	MOV		ECX, LENGTHOF testNum
-	
-	MOV		AL,0
+	MOV		AL,0 ; null terminator at beginning
 	
 	STOSB
 	CLD
@@ -361,16 +353,19 @@ WriteVal PROC
 	MOV		ECX, LENGTHOF outputString	
 
 	CMP		testNum, -1
-	JG		_positiveNum
+	JG		_positiveOrZeroNum
 	NEG		testNum
 	MOV		EAX, 1 ;negFlag
+	PUSH	EAX
+	JMP		_loopSetup
 	
-	
-	
+
+_positiveOrZeroNum:
+	MOV		EAX, 0
 	PUSH	EAX
 
 
-_positiveNum:
+_loopSetup:
 	
 	MOV		EAX, testNum;[EBP+12];testNum
 	MOV		EBX, 10		; divisor
