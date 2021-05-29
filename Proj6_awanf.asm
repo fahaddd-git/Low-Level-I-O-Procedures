@@ -96,10 +96,10 @@ NINE=57
 
 	indexer			DWORD	0
 
-	testNum			SDWORD		2147483647		
-	outputString	BYTE		10 DUP(?)
+	testNum			SDWORD		-1123		
+	outputString	BYTE		15 DUP(?)
 	otherString		BYTE		"Hope this doesn't print",0
-
+	reversedString	BYTE		15 DUP(?)
 
 
 
@@ -160,7 +160,7 @@ main ENDP
 ReadVal PROC
 
 	
-	LOCAL		negBool:BYTE, lengthCounter:DWORD, intAccumulator:SDWORD 
+	LOCAL		negBool:BYTE, lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD
 
 	PUSH	EBP
 	MOV		EBP, ESP
@@ -172,6 +172,11 @@ ReadVal PROC
 
 _rePrompt:
 	mGetString	OFFSET enterNum, OFFSET storedString, LENGTHOF storedString   ;need to get these from stack
+
+	MOV			inputLength, EAX	; length of user input (includes sign if present)
+
+	CMP			EAX,0		; user didn't enter anything
+	JE			_invalidItem
 
 
 	MOV			intAccumulator, 0 
@@ -266,6 +271,11 @@ _return:					; TODO: save the SDWORD into an array
 	
 	ADD		indexer, 4
 
+	MOV		EAX, inputLength
+	MOV		EBX, intHolder
+	PUSH	EAX
+	PUSH	EBX
+	CALL	WriteVal	
 
 
 
@@ -320,28 +330,49 @@ math ENDP
 
 
 WriteVal PROC
+	
+	
 
-	LOCAL		temporary:DWORD
 
 	PUSH	EBP
 	MOV		EBP, ESP
+	
+	;MOV		EBX, intHolder;[EBP+12]	;from ReadVal. intHolder SDWORD int
+	;MOV		EAX, [EBX]
+	;MOV		EAX,  [EBP+8] ;from ReadVal. length of user input
+
 ; testString sdword 12345
 ;outputString byte 5 dup(?)
 
 	
-
-	MOV		EDI, OFFSET	outputString
-	ADD		EDI, LENGTHOF outputString	; edi now points at end of outputstring
+	MOV		EDI, OFFSET outputString;outputString
+	;ADD		EDI, LENGTHOF outputString-1	; edi now points at end of outputstring
 
 ;	MOV		ECX, LENGTHOF testNum
 	
-	STD					; set flag so pointer moves backwards
-	MOV		AL, 0
+	MOV		AL,0
+	
 	STOSB
+	CLD
+	
+
+	;MOV		EDI, OFFSET outputString
 	
 	MOV		ECX, LENGTHOF outputString	
 
-	MOV		EAX, testNum
+	CMP		testNum, -1
+	JG		_positiveNum
+	NEG		testNum
+	MOV		EAX, 1 ;negFlag
+	
+	
+	
+	PUSH	EAX
+
+
+_positiveNum:
+	
+	MOV		EAX, testNum;[EBP+12];testNum
 	MOV		EBX, 10		; divisor
 
 _stringLoop:
@@ -352,8 +383,7 @@ _stringLoop:
 
 	IDIV	EBX
 	PUSH	EAX
-;	MOV		temporary, EDX
-	MOV		AL, DL;BYTE ptr temporary
+	MOV		AL, DL
 	ADD		AL, 48
 
 	STOSB
@@ -366,13 +396,44 @@ _stringLoop:
 	LOOP	_stringLoop
 
 _stringComplete:
+	
+	POP		EAX
+	CMP		EAX, 1
+	JNE		_displayString
+	MOV		AL, MINUS
+	STOSB
+	DEC		ECX  ;accomodates for - sign
 
-	mDisplayString	offset outputString
+
+_displayString:
+
+	; need to reverse string for display here
+	MOV		EDI, OFFSET reversedString
+	MOV		ESI, OFFSET outputString
+	ADD		ESI, LENGTHOF reversedString ; point at end of outputString
+	DEC		ECX
+	SUB		ESI, ECX
+	MOV		ECX, LENGTHOF reversedString
+
+;	DEC		ESI
+
+_revLoop:
+	STD
+	LODSB
+	CLD
+	STOSB
+	LOOP	_revLoop
+
+	
+	
+	mDisplayString	OFFSET reversedString
+
+
 
 
 
 	POP		EBP
-	RET
+	RET		8
 
 WriteVal ENDP
 
