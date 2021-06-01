@@ -81,27 +81,35 @@ MINUS=45
 ZERO=48
 NINE=57
 
+; sdword limits
 MAXSIZE= 2147483647
+MINSIZE= -2147483648
 
 .data
+
+	; readval proc
+
 	enterNum		BYTE		"Enter a signed number: ",0
 	errorMsg		BYTE		"ERROR: Number too large or invalid",0
+	storedString	BYTE		16 DUP(?) 
+	intHolder		SDWORD		?
+	intArray		SDWORD		MAXNUMS DUP(?)				; array of entered strings
+	indexer			DWORD		0
 
+	; writeval proc
 
-	;inString	BYTE	"5",0
-	;outString	SDWORD	0
-
-	storedString		BYTE	16 DUP(?) 
-	intHolder			SDWORD		?
-
-	intArray			SDWORD		MAXNUMS DUP(?)				; array of entered strings
-
-	indexer			DWORD	0
-
-	testNum			SDWORD		-1	
+	testNum			SDWORD		2147483647
 	outputString	BYTE		16 DUP(?)
-	otherString		BYTE		"Hope this doesn't print",0
+;	otherString		BYTE		"Hope this doesn't print",0
 	reversedString	BYTE		16 DUP(?)
+	;doesThisWork	BYTE		"Testing",0,"Worked!"
+
+	; math proc
+	
+	sumInfo			BYTE		"The sum of the numbers is: ",0
+	averageInfo		BYTE		"The average of the numbers is: ",0
+	sum				SDWORD		?
+	average			SDWORD		?
 
 
 
@@ -109,31 +117,45 @@ MAXSIZE= 2147483647
 main PROC
 
 	; gets and converts MAXNUMS strings to an array of integers
-;	PUSH	OFFSET intArray
-;	MOV		ECX, MAXNUMS		; amount of strings to gather from user
-;_getNums:
-;	CALL	ReadVal
-;	LOOP	_getNums
-;
-;
-;
-;	; prints array for testing purposes
-;
-;	MOV		EDI, OFFSET intArray
-;	MOV		ECX, LENGTHOF intArray
-;
-;_printArray:
-;	MOV		EAX, [EDI]
-;	CALL	WriteInt
-;	MOV		AL, " "
-;	CALL	WriteChar
-;	ADD		EDI, 4
-;	LOOP	_printArray
-;
-;	PUSH	OFFSET intArray
-;	CALL	math
+	PUSH	OFFSET intArray
+	
+	MOV		ECX, MAXNUMS		; amount of strings to gather from user
+	MOV		EDI, OFFSET intArray
+	
+_getNums:
+	
+	CALL	ReadVal
+	MOV		EAX, intHolder
+	MOV		[EDI], EAX
+	ADD		EDI, 4
 
-	CALL	WriteVal
+	LOOP	_getNums
+
+
+
+	; prints array for testing purposes
+
+	MOV		EDI, OFFSET intArray
+	MOV		ECX, LENGTHOF intArray
+
+_printArray:
+	MOV		EAX, [EDI]
+	CALL	WriteInt
+	MOV		AL, " "
+	CALL	WriteChar
+	ADD		EDI, 4
+	LOOP	_printArray
+	
+	; calculate and stores sum and average
+	PUSH	sum
+	PUSH	average
+	PUSH	OFFSET	averageInfo
+	PUSH	OFFSET	sumInfo
+	PUSH	OFFSET	intArray
+	CALL	Math
+
+;	CALL	WriteVal
+	
 	
 
 
@@ -266,18 +288,18 @@ _return:					; TODO: save the SDWORD into an array
 
 	MOV		intHolder,	EAX				; TODO: needs fixing, uses globals
 
-	MOV		EDI, OFFSET intArray
-	ADD		EDI, indexer
-	MOV		ESI, intHolder
-	MOV		[EDI], ESI
+;	MOV		EDI, OFFSET intArray
+;	ADD		EDI, indexer
+;	MOV		ESI, intHolder
+;	MOV		[EDI], ESI
 	
-	ADD		indexer, 4
+;	ADD		indexer, 4
 
-	MOV		EAX, inputLength
-	MOV		EBX, intHolder
-	PUSH	EAX
-	PUSH	EBX
-	CALL	WriteVal	
+;	MOV		EAX, inputLength
+;	MOV		EBX, intHolder
+;	PUSH	EAX
+;	PUSH	EBX
+;	CALL	WriteVal	
 
 
 
@@ -297,44 +319,53 @@ ReadVal ENDP
 
 
 ; calculates sum and average
-math PROC
+Math PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
-
+	;[EBP+12] = sumInfo
+	;[EBP+16]=averageInfo
+	;[EBP+20]= average
+	;[EBP+24=sum
 	MOV		ECX, MAXNUMS	; loop maxnums times
 	MOV		ESI, [EBP+8]	; intArray offset
 	XOR		EAX, EAX		; prepare for accumulation
 
-_sumLoop:
+_sumLoop: ; iterates thru array adding nums
 	
 	ADD		EAX, [ESI]
 	ADD		ESI, 4
 	LOOP	_sumLoop
 
-	CALL	CrLf
-	CALL	WriteInt
+	CALL	CrLf		
+
+
+	mDisplayString [EBP+12]  ; displays sumInfo
+
+	CALL	WriteInt				; TODO: Convert to string
+	MOV		[EBP+24], EAX			; store sum
 
 	; calc/display avg
 
-	CDQ			; sign extend
-	MOV		EBX, MAXNUMS
-	IDIV	EBX
+	CDQ						; sign extend
+	MOV		EBX, MAXNUMS	
+	IDIV	EBX				; divide by amount of user inputs
 	CALL	CrLf
-	CALL	WriteInt
+
+	mDisplayString [EBP+16]	;averageInfo
+
+	CALL	WriteInt				; TODO: convert to String
+	MOV		[EBP+20], EAX			; store average
 
 
 
 	POP		EBP
-	RET		8
+	RET		16
 
-math ENDP
+Math ENDP
 
 
 WriteVal PROC
-	
-	
-
 
 	PUSH	EBP
 	MOV		EBP, ESP
