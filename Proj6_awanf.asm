@@ -98,10 +98,10 @@ MINSIZE= -2147483648
 
 	; writeval proc
 
-	testNum			SDWORD		2147483647
-	outputString	BYTE		16 DUP(?)
+	someNum			SDWORD		2147483647
+;	outputString	BYTE		16 DUP(?)
 ;	otherString		BYTE		"Hope this doesn't print",0
-	reversedString	BYTE		16 DUP(?)
+;	reversedString	BYTE		16 DUP(?)
 	;doesThisWork	BYTE		"Testing",0,"Worked!"
 
 	; math proc
@@ -116,46 +116,52 @@ MINSIZE= -2147483648
 .code
 main PROC
 
-	; gets and converts MAXNUMS strings to an array of integers
-	PUSH	OFFSET intArray
-	
-	MOV		ECX, MAXNUMS		; amount of strings to gather from user
-	MOV		EDI, OFFSET intArray
-	
-_getNums:
-	
-	CALL	ReadVal
-	MOV		EAX, intHolder
-	MOV		[EDI], EAX
-	ADD		EDI, 4
+;	; gets and converts MAXNUMS strings to an array of integers
+;	PUSH	OFFSET intArray
+;	
+;	MOV		ECX, MAXNUMS		; amount of strings to gather from user
+;	MOV		EDI, OFFSET intArray
+;	
+;_getNums:			; gets MAXNUMS numbers, converts to sdword, stores them in intArray
+;	
+;	CALL	ReadVal
+;	MOV		EAX, intHolder
+;	MOV		[EDI], EAX
+;	ADD		EDI, 4
+;
+;	LOOP	_getNums
+;
+;
+;
+;	; prints array for testing purposes
+;
+;	MOV		EDI, OFFSET intArray
+;	MOV		ECX, LENGTHOF intArray
+;
+;_printArray:
+;	MOV		EAX, [EDI]
+;	CALL	WriteInt
+;	MOV		AL, " "
+;	CALL	WriteChar
+;	ADD		EDI, 4
+;	LOOP	_printArray
+;	
+;	; calculate and stores sum and average
+;	PUSH	sum
+;	PUSH	average
+;	PUSH	OFFSET	averageInfo
+;	PUSH	OFFSET	sumInfo
+;	PUSH	OFFSET	intArray
+;	CALL	Math
 
-	LOOP	_getNums
 
-
-
-	; prints array for testing purposes
-
-	MOV		EDI, OFFSET intArray
-	MOV		ECX, LENGTHOF intArray
-
-_printArray:
-	MOV		EAX, [EDI]
-	CALL	WriteInt
-	MOV		AL, " "
-	CALL	WriteChar
-	ADD		EDI, 4
-	LOOP	_printArray
-	
-	; calculate and stores sum and average
-	PUSH	sum
-	PUSH	average
-	PUSH	OFFSET	averageInfo
-	PUSH	OFFSET	sumInfo
-	PUSH	OFFSET	intArray
-	CALL	Math
-
-;	CALL	WriteVal
-	
+	MOV		EAX, 69
+	PUSH	EAX
+	CALL	WriteVal
+	CALL	CrLf
+	MOV		EAX, 95
+	PUSH	EAX
+	CALL	WriteVal
 	
 
 
@@ -323,8 +329,9 @@ Math PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
-	;[EBP+12] = sumInfo
-	;[EBP+16]=averageInfo
+	;[EBP+8]=intArray offset
+	;[EBP+12] = average
+	;[EBP+16]=sum
 	;[EBP+20]= average
 	;[EBP+24=sum
 	MOV		ECX, MAXNUMS	; loop maxnums times
@@ -366,9 +373,16 @@ Math ENDP
 
 
 WriteVal PROC
+	LOCAL	testNum:SDWORD
+	.data
+		outputString	BYTE	16 DUP(?)
+		reversedString	BYTE	16 DUP(?)
 
-	PUSH	EBP
-	MOV		EBP, ESP
+	.code
+	; LOCAL does stack frame initialization 
+
+	MOV		EAX, [EBP+8]
+	MOV		testNum, EAX
 
 	
 	MOV		EDI, OFFSET outputString;outputString
@@ -458,7 +472,7 @@ _revLoop:
 
 
 
-	POP		EBP
+	;POP		EBP
 	RET		8
 
 WriteVal ENDP
