@@ -108,60 +108,62 @@ MINSIZE= -2147483648
 	
 	sumInfo			BYTE		"The sum of the numbers is: ",0
 	averageInfo		BYTE		"The average of the numbers is: ",0
-	sum				SDWORD		?
-	average			SDWORD		?
+
 
 
 
 .code
 main PROC
 
-;	; gets and converts MAXNUMS strings to an array of integers
+	; gets and converts MAXNUMS strings to an array of integers
+
 ;	PUSH	OFFSET intArray
-;	
-;	MOV		ECX, MAXNUMS		; amount of strings to gather from user
-;	MOV		EDI, OFFSET intArray
-;	
-;_getNums:			; gets MAXNUMS numbers, converts to sdword, stores them in intArray
-;	
-;	CALL	ReadVal
-;	MOV		EAX, intHolder
-;	MOV		[EDI], EAX
-;	ADD		EDI, 4
-;
-;	LOOP	_getNums
-;
-;
-;
-;	; prints array for testing purposes
-;
-;	MOV		EDI, OFFSET intArray
-;	MOV		ECX, LENGTHOF intArray
-;
-;_printArray:
-;	MOV		EAX, [EDI]
-;	CALL	WriteInt
-;	MOV		AL, " "
-;	CALL	WriteChar
-;	ADD		EDI, 4
-;	LOOP	_printArray
-;	
-;	; calculate and stores sum and average
-;	PUSH	sum
-;	PUSH	average
-;	PUSH	OFFSET	averageInfo
-;	PUSH	OFFSET	sumInfo
-;	PUSH	OFFSET	intArray
-;	CALL	Math
+	
+	MOV		ECX, MAXNUMS		; amount of strings to gather from user
+	MOV		EDI, OFFSET intArray
+	
+_getNums:			; gets MAXNUMS numbers, converts to sdword, stores them in intArray
+	
+	PUSH	OFFSET intHolder
+	CALL	ReadVal
+	MOV		EAX, intHolder
+	MOV		[EDI], EAX
+	ADD		EDI, 4
+
+	LOOP	_getNums
 
 
-	MOV		EAX, 69
-	PUSH	EAX
-	CALL	WriteVal
-	CALL	CrLf
-	MOV		EAX, 95
-	PUSH	EAX
-	CALL	WriteVal
+
+	; prints array for testing purposes
+
+	MOV		EDI, OFFSET intArray
+	MOV		ECX, LENGTHOF intArray
+
+_printArray:
+	MOV		EAX, [EDI]
+	CALL	WriteInt
+	MOV		AL, " "
+	CALL	WriteChar
+	ADD		EDI, 4
+	LOOP	_printArray
+	
+	; calculate and stores sum and average
+	
+	PUSH	OFFSET	averageInfo
+	PUSH	OFFSET	sumInfo
+	PUSH	OFFSET	intArray
+	CALL	Math
+
+
+
+
+;	MOV		EAX, 69
+;	PUSH	EAX
+;	CALL	WriteVal
+;	CALL	CrLf
+;	MOV		EAX, 95
+;	PUSH	EAX
+;	CALL	WriteVal
 	
 
 
@@ -192,11 +194,11 @@ ReadVal PROC
 	
 	LOCAL		negBool:BYTE, lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD
 
-	PUSH	EBP
-	MOV		EBP, ESP
+;	PUSH	EBP
+;	MOV		EBP, ESP  TODO: RESTORE OTHER REGS
 	
 	PUSH	ECX
-;	PUSH	EDI
+	PUSH	EDI
 
 	;prompts and fills userStrings array with input
 
@@ -290,32 +292,18 @@ _return:					; TODO: save the SDWORD into an array
 
 
 
-		; stores the valid input in the intArray array as SDWORDS
+	; stores the valid input in the intArray array as SDWORDS
 
-	MOV		intHolder,	EAX				; TODO: needs fixing, uses globals
-
-;	MOV		EDI, OFFSET intArray
-;	ADD		EDI, indexer
-;	MOV		ESI, intHolder
-;	MOV		[EDI], ESI
-	
-;	ADD		indexer, 4
-
-;	MOV		EAX, inputLength
-;	MOV		EBX, intHolder
-;	PUSH	EAX
-;	PUSH	EBX
-;	CALL	WriteVal	
+	MOV	EDI, [EBP+8]	; OFFSET intHolder
+	MOV [EDI], EAX
 
 
 
 
 
 
-
-
+	POP	EDI
 	POP	ECX
-	POP	EBP
 
 
 _theEnd:	
@@ -329,11 +317,13 @@ Math PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
+
+	
 	;[EBP+8]=intArray offset
-	;[EBP+12] = average
-	;[EBP+16]=sum
-	;[EBP+20]= average
-	;[EBP+24=sum
+	;[EBP+12] = sumInfo
+	;[EBP+16]=averageInfo
+
+
 	MOV		ECX, MAXNUMS	; loop maxnums times
 	MOV		ESI, [EBP+8]	; intArray offset
 	XOR		EAX, EAX		; prepare for accumulation
@@ -349,8 +339,10 @@ _sumLoop: ; iterates thru array adding nums
 
 	mDisplayString [EBP+12]  ; displays sumInfo
 
-	CALL	WriteInt				; TODO: Convert to string
-	MOV		[EBP+24], EAX			; store sum
+	;CALL	WriteInt				; TODO: Convert to string
+;	MOV		[EBP+24], EAX			; store sum
+	PUSH	EAX
+	CALL	WriteVal
 
 	; calc/display avg
 
@@ -362,12 +354,12 @@ _sumLoop: ; iterates thru array adding nums
 	mDisplayString [EBP+16]	;averageInfo
 
 	CALL	WriteInt				; TODO: convert to String
-	MOV		[EBP+20], EAX			; store average
+;	MOV		[EBP+20], EAX			; store average
 
 
 
 	POP		EBP
-	RET		16
+	RET		12
 
 Math ENDP
 
@@ -380,6 +372,13 @@ WriteVal PROC
 
 	.code
 	; LOCAL does stack frame initialization 
+
+	PUSH	EAX
+	PUSH	EDI
+	PUSH	ECX
+	PUSH	EBX
+	PUSH	ESI
+
 
 	MOV		EAX, [EBP+8]
 	MOV		testNum, EAX
@@ -469,11 +468,19 @@ _revLoop:
 	mDisplayString	OFFSET reversedString
 
 
+	
 
+	
+	
+	POP	ESI
+	POP	EBX
+	POP	ECX
+	POP	EDI
+	POP	EAX
 
 
 	;POP		EBP
-	RET		8
+	RET		4
 
 WriteVal ENDP
 
