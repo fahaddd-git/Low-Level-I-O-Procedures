@@ -1,7 +1,7 @@
 TITLE  Low level I/O Procedure Program     (Proj6_awanf.asm)
 
 ; Author: Fahad Awan
-; Last Modified: 5/25/2021
+; Last Modified: 6/2/2021
 ; OSU email address:awanf@oregonstate.edu
 ; Course number/section:   CS271 Section 400
 ; Project Number:         6        Due Date: 6/6/2021
@@ -38,7 +38,7 @@ mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userI
 	CALL	WriteString
 	
 	MOV		EDX, storeLocationOffset	 ; point to the buffer
-	MOV		ECX, maxLength			 ; specify max characters
+	MOV		ECX, maxLength				 ; specify max characters
 	CALL	ReadString					 ; input the string
 	MOV		userInputLength, EAX
 	
@@ -54,7 +54,7 @@ ENDM
 ;
 ; Displays string in console.
 ;
-; Preconditions: do not use EDX as argument (needs testing)
+; Preconditions: do not use EDX as argument (untrue)
 ; Postconditions: string starting at stringOffset printed to console
 ;
 ; Receives: stringOffset = offset of string to display
@@ -95,7 +95,7 @@ MIN= -2147483648
 	enterNum		BYTE		"Enter a signed number: ",0
 	errorMsg		BYTE		"ERROR: Number too large, too long, or invalid",0
 	intHolder		SDWORD		?
-	intArray		SDWORD		MAXNUMS DUP(?)				; array of entered strings
+	intArray		SDWORD		MAXNUMS DUP(?)				
 	
 	sumInfo			BYTE		"The sum of the numbers is: ",0
 	averageInfo		BYTE		"The average of the numbers is: ",0
@@ -271,6 +271,8 @@ _continueCalcs:
 	MOV		EDX, 10			; prepare for multiplication
 	IMUL	EDX				; 10(previous calculations)
 	
+	JC		_invalidItem	; carry flag 
+
 
 	ADD		EAX, EBX		; +(49-digit)
 	MOV		intAccumulator, EAX	; store accumulation
@@ -287,8 +289,6 @@ _overflowDetected:
 
 	CMP		negBool,1
 	JNE		_invalidItem
-	;MOV		EAX, MIN
-	;NEG		EAX
 	CMP		intAccumulator, MIN
 	JNE		_invalidItem
 
@@ -303,20 +303,18 @@ _endCalculations:
 _writeToConsole:
 
 	MOV		EAX, intAccumulator
-	CALL	WriteInt
-	CALL	CrLf
 	JMP		_return
 
 	; invalid entries 
 
 _invalidItem:
-;	MOV		EDX, [EBP+16]	; errormsg String
-	mDisplayString	[EBP+16]
+
+	mDisplayString	[EBP+16]	; display errorMsg string
 	CALL	CrLf
 	MOV		negBool, 0			; reset negBool
-	JMP		_rePrompt		; prompt user again for valid input
+	JMP		_rePrompt			; prompt user again for valid input
 
-_return:					; TODO: save the SDWORD into an array
+_return:					
 
 
 
@@ -397,10 +395,6 @@ _sumLoop: ; iterates thru array adding nums
 	CALL	CrLf
 
 	POPAD
-;	POP		EBX
-;	POP		EAX
-;	POP		ESI
-;	POP		ECX
 
 	POP		EBP
 	RET		12
@@ -415,14 +409,7 @@ WriteVal PROC
 		reversedString	BYTE	16 DUP(?)
 
 	.code
-	; LOCAL does stack frame initialization 
 
-;	PUSH	EAX
-;	PUSH	EDI
-;	PUSH	ECX
-;	PUSH	EBX
-;	PUSH	ESI
-;	PUSH	EDX
 	PUSHAD
 
 	MOV		EAX, [EBP+8]
@@ -544,12 +531,8 @@ _revLoop:
 	
 	mDisplayString	OFFSET reversedString
 
-;	POP	EDX
-;	POP	ESI
-;	POP	EBX
-;	POP	ECX
-;	POP	EDI
-;	POP	EAX
+
+
 	POPAD
 
 	RET		4
