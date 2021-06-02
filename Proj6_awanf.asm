@@ -26,20 +26,23 @@ INCLUDE Irvine32.inc
 ;		   amount of bytes read in EAX
 ; ---------------------------------------------------------------------------------
 
-mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, lengthValue:REQ
+mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userInputLength:REQ
 	
 
 .code
 	PUSH	EDX
 	PUSH	ECX
+	PUSH	EAX
 
 	MOV		EDX, promptOffset
 	CALL	WriteString
 	
-	mov edx, storeLocationOffset	 ; point to the buffer
-	mov ecx, lengthValue			 ; specify max characters
-	call ReadString					 ; input the string
+	MOV		EDX, storeLocationOffset	 ; point to the buffer
+	MOV		ECX, maxLength			 ; specify max characters
+	CALL	ReadString					 ; input the string
+	MOV		userInputLength, EAX
 	
+	POP		EAX
 	POP		ECX
 	POP		EDX
 	
@@ -73,13 +76,15 @@ ENDM
 
 
 ; amount of integers to prompt/display
-MAXNUMS=1
+MAXNUMS=3
 
 ; ASCII codes
 PLUS=43
 MINUS=45
 ZERO=48
 NINE=57
+
+LENGTHLIMIT=150
 
 ; sdword limits
 MAX= 2147483647
@@ -90,15 +95,15 @@ MIN= -2147483648
 	; readval proc
 
 	enterNum		BYTE		"Enter a signed number: ",0
-	errorMsg		BYTE		"ERROR: Number too large or invalid",0
-	storedString	BYTE		16 DUP(?) 
+	errorMsg		BYTE		"ERROR: Number too large, too long, or invalid",0
+;	storedString	BYTE		LENGTHLIMIT DUP(?) 
 	intHolder		SDWORD		?
 	intArray		SDWORD		MAXNUMS DUP(?)				; array of entered strings
 ;	indexer			DWORD		0
 
 	; writeval proc
 
-	someNum			SDWORD		2147483647
+;	someNum			SDWORD		2147483647
 ;	outputString	BYTE		16 DUP(?)
 ;	otherString		BYTE		"Hope this doesn't print",0
 ;	reversedString	BYTE		16 DUP(?)
@@ -126,8 +131,12 @@ main PROC
 	
 _getNums:			; gets MAXNUMS numbers, converts to sdword, stores them in intArray
 	
-	PUSH	OFFSET intHolder
+	PUSH	OFFSET	errorMsg
+	PUSH	OFFSET	enterNum
+	PUSH	OFFSET	intHolder
 	CALL	ReadVal
+	
+	
 	MOV		EAX, intHolder
 	MOV		[EDI], EAX
 	ADD		EDI, 4
@@ -187,21 +196,31 @@ ReadVal PROC
 
 	
 	LOCAL		negBool:BYTE, lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD
-
-;	PUSH	EBP
-;	MOV		EBP, ESP  TODO: RESTORE OTHER REGS
 	
-	PUSH	ECX
-	PUSH	EDI
+	.data
+		storedString		BYTE		LENGTHLIMIT DUP(?)
+
+	.code
+
+	;  TODO: RESTORE OTHER REGS
+	
+	PUSHAD
 
 	;prompts and fills userStrings array with input
 
 _rePrompt:
-	mGetString	OFFSET enterNum, OFFSET storedString, LENGTHOF storedString   ;need to get these from stack
 
-	MOV			inputLength, EAX	; length of user input (includes sign if present)
+	;[EBP+12]=enterNum string
+	;[EBP+16]=errormsg string
+	mGetString	[EBP+12], OFFSET storedString, LENGTHOF storedString, inputLength   ;need to get these from stack. 
 
-	CMP			EAX,0		; user didn't enter anything
+	; TODO some kind of length validations
+
+
+	CMP			inputLength, 15
+	JGE			_invalidItem
+
+	CMP			inputLength,0		; user didn't enter anything
 	JE			_invalidItem
 
 
@@ -277,7 +296,7 @@ _writeToConsole:
 	; invalid entries 
 
 _invalidItem:
-	MOV		EDX, OFFSET errorMsg
+	MOV		EDX, [EBP+16]	; errormsg String
 	CALL	WriteString
 	CALL	CrLf
 	JMP		_rePrompt		; prompt user again for valid input
@@ -295,13 +314,13 @@ _return:					; TODO: save the SDWORD into an array
 
 
 
-
-	POP	EDI
-	POP	ECX
+	POPAD
+	;POP	EDI
+	;POP	ECX
 
 
 _theEnd:	
-	RET 4
+	RET 12
 ReadVal ENDP
 
 
@@ -311,12 +330,13 @@ Math PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
-
-	PUSH	ECX
-	PUSH	ESI
-	PUSH	EAX
-	PUSH	EBX
-
+	
+	PUSHAD
+;	PUSH	ECX
+;	PUSH	ESI
+;	PUSH	EAX
+;	PUSH	EBX
+;
 	
 	;[EBP+8]=intArray offset
 	;[EBP+12] = sumInfo
@@ -356,11 +376,11 @@ _sumLoop: ; iterates thru array adding nums
 	CALL	WriteVal				
 	CALL	CrLf
 
-
-	POP		EBX
-	POP		EAX
-	POP		ESI
-	POP		ECX
+	POPAD
+;	POP		EBX
+;	POP		EAX
+;	POP		ESI
+;	POP		ECX
 
 	POP		EBP
 	RET		12
@@ -377,12 +397,13 @@ WriteVal PROC
 	.code
 	; LOCAL does stack frame initialization 
 
-	PUSH	EAX
-	PUSH	EDI
-	PUSH	ECX
-	PUSH	EBX
-	PUSH	ESI
-
+;	PUSH	EAX
+;	PUSH	EDI
+;	PUSH	ECX
+;	PUSH	EBX
+;	PUSH	ESI
+;	PUSH	EDX
+	PUSHAD
 
 	MOV		EAX, [EBP+8]
 	MOV		testNum, EAX
@@ -503,15 +524,14 @@ _revLoop:
 	
 	mDisplayString	OFFSET reversedString
 
-	
-	POP	ESI
-	POP	EBX
-	POP	ECX
-	POP	EDI
-	POP	EAX
+;	POP	EDX
+;	POP	ESI
+;	POP	EBX
+;	POP	ECX
+;	POP	EDI
+;	POP	EAX
+	POPAD
 
-
-	;POP		EBP
 	RET		4
 
 WriteVal ENDP
