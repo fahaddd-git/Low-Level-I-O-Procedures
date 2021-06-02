@@ -182,10 +182,11 @@ main ENDP
 ReadVal PROC
 
 	
-	LOCAL		negBool:BYTE, lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD
+	LOCAL		lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD
 	
 	.data
 		storedString		BYTE		LENGTHLIMIT DUP(?)
+		negBool				BYTE		0 
 
 	.code
 
@@ -202,15 +203,25 @@ _rePrompt:
 
 	; TODO some kind of length validations? might need to limit length
 
-
 	CMP		inputLength, 15		; num too long
 	JGE		_invalidItem
 
 	CMP		inputLength,0		; user didn't enter anything
 	JE		_invalidItem
 
+	; user entered only a + or - sign
+
 	CMP		inputLength, 1
-	JE		_
+	JNE		_validLength
+	MOV		ESI, OFFSET storedString
+	LODSB	
+	CMP		AL, MINUS
+	JE		_invalidItem
+	CMP		AL, PLUS
+	JE		_invalidItem
+
+
+_validLength:
 
 
 	MOV		intAccumulator, 0 
@@ -299,9 +310,10 @@ _writeToConsole:
 	; invalid entries 
 
 _invalidItem:
-	MOV		EDX, [EBP+16]	; errormsg String
-	CALL	WriteString
+;	MOV		EDX, [EBP+16]	; errormsg String
+	mDisplayString	[EBP+16]
 	CALL	CrLf
+	MOV		negBool, 0			; reset negBool
 	JMP		_rePrompt		; prompt user again for valid input
 
 _return:					; TODO: save the SDWORD into an array
