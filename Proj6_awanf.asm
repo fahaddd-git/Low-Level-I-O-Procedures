@@ -73,7 +73,7 @@ ENDM
 
 
 ; amount of integers to prompt/display
-MAXNUMS=3
+MAXNUMS=1
 
 ; ASCII codes
 PLUS=43
@@ -82,8 +82,8 @@ ZERO=48
 NINE=57
 
 ; sdword limits
-MAXSIZE= 2147483647
-MINSIZE= -2147483648
+MAX= 2147483647
+MIN= -2147483648
 
 .data
 
@@ -94,7 +94,7 @@ MINSIZE= -2147483648
 	storedString	BYTE		16 DUP(?) 
 	intHolder		SDWORD		?
 	intArray		SDWORD		MAXNUMS DUP(?)				; array of entered strings
-	indexer			DWORD		0
+;	indexer			DWORD		0
 
 	; writeval proc
 
@@ -108,6 +108,8 @@ MINSIZE= -2147483648
 	
 	sumInfo			BYTE		"The sum of the numbers is: ",0
 	averageInfo		BYTE		"The average of the numbers is: ",0
+	delimiter		BYTE		"  ",0
+	userNumInfo		BYTE		"These are the numbers you entered:",13,10,0
 
 
 
@@ -132,20 +134,6 @@ _getNums:			; gets MAXNUMS numbers, converts to sdword, stores them in intArray
 
 	LOOP	_getNums
 
-
-
-	; prints array for testing purposes
-
-	MOV		EDI, OFFSET intArray
-	MOV		ECX, LENGTHOF intArray
-
-_printArray:
-	MOV		EAX, [EDI]
-	CALL	WriteInt
-	MOV		AL, " "
-	CALL	WriteChar
-	ADD		EDI, 4
-	LOOP	_printArray
 	
 	; calculate and stores sum and average
 	
@@ -154,17 +142,23 @@ _printArray:
 	PUSH	OFFSET	intArray
 	CALL	Math
 
+	CALL	CrLf
+	MOV		EDX, OFFSET userNumInfo
+	mDisplayString	EDX
 
+	; prints userArray
+;
+	MOV		EDI, OFFSET intArray
+	MOV		ECX, LENGTHOF intArray
 
-
-;	MOV		EAX, 69
-;	PUSH	EAX
-;	CALL	WriteVal
-;	CALL	CrLf
-;	MOV		EAX, 95
-;	PUSH	EAX
-;	CALL	WriteVal
-	
+_printArray:
+	MOV		EAX, [EDI]
+	PUSH	EAX
+	CALL	WriteVal
+	mDisplayString	OFFSET delimiter
+	ADD		EDI, 4
+	LOOP	_printArray
+	CALL	CrLf
 
 
 	Invoke ExitProcess,0	; exit to operating system
@@ -318,6 +312,11 @@ Math PROC
 	PUSH	EBP
 	MOV		EBP, ESP
 
+	PUSH	ECX
+	PUSH	ESI
+	PUSH	EAX
+	PUSH	EBX
+
 	
 	;[EBP+8]=intArray offset
 	;[EBP+12] = sumInfo
@@ -339,10 +338,10 @@ _sumLoop: ; iterates thru array adding nums
 
 	mDisplayString [EBP+12]  ; displays sumInfo
 
-	;CALL	WriteInt				; TODO: Convert to string
-;	MOV		[EBP+24], EAX			; store sum
-	PUSH	EAX
+	
+	PUSH	EAX				; the sum
 	CALL	WriteVal
+	CALL	CrLf
 
 	; calc/display avg
 
@@ -351,12 +350,17 @@ _sumLoop: ; iterates thru array adding nums
 	IDIV	EBX				; divide by amount of user inputs
 	CALL	CrLf
 
-	mDisplayString [EBP+16]	;averageInfo
+	mDisplayString [EBP+16]		;averageInfo strng
 
-	CALL	WriteInt				; TODO: convert to String
-;	MOV		[EBP+20], EAX			; store average
+	PUSH	EAX						; the average
+	CALL	WriteVal				
+	CALL	CrLf
 
 
+	POP		EBX
+	POP		EAX
+	POP		ESI
+	POP		ECX
 
 	POP		EBP
 	RET		12
@@ -365,7 +369,7 @@ Math ENDP
 
 
 WriteVal PROC
-	LOCAL	testNum:SDWORD
+	LOCAL	testNum:SDWORD, negFlag:DWORD, minFlag:DWORD
 	.data
 		outputString	BYTE	16 DUP(?)
 		reversedString	BYTE	16 DUP(?)
@@ -394,25 +398,45 @@ WriteVal PROC
 
 	;MOV		EDI, OFFSET outputString
 	
-	MOV		ECX, LENGTHOF outputString	
+
+	; determines if the number is positive or 0
 
 	CMP		testNum, -1
 	JG		_positiveOrZeroNum
+
+	; tests to see if this number is the minimum SDWORD special case
+	CMP		testNum, MIN
+	JNE		_notMinimumNum
+	MOV		minFlag, 1		; raise the min flag
+	
+	; all other negative numbers
+_notMinimumNum:
+
 	NEG		testNum
-	MOV		EAX, 1 ;negFlag
-	PUSH	EAX
+	MOV		negFlag, 1 ;negFlag
+;	PUSH	EAX
 	JMP		_loopSetup
 	
 
 _positiveOrZeroNum:
-	MOV		EAX, 0
-	PUSH	EAX
+	MOV		negFlag, 0
+;	PUSH	EAX
 
 
 _loopSetup:
 	
-	MOV		EAX, testNum;[EBP+12];testNum
+	MOV		EAX, testNum
+
+
+	CMP		minFlag,1
+	JNE		_notSpecialCase
+	DEC		EAX			; decrement the max num
+
+_notSpecialCase:
 	MOV		EBX, 10		; divisor
+	MOV		ECX, LENGTHOF outputString	
+
+
 
 _stringLoop:
 
@@ -425,10 +449,22 @@ _stringLoop:
 	MOV		AL, DL
 	ADD		AL, 48
 
+	; special case min flag raised
+	CMP		minFlag, 1
+	JNE		_continueLoop
+	DEC		minFlag			; set minFlagg to 0
+	INC		AL				; change the digit from 7 to 8
+	
+
+_continueLoop:
 	STOSB
+
+
 	POP		EAX
 	CMP		EAX, 0
 	JE		_stringComplete
+
+
 
 
 
@@ -436,8 +472,8 @@ _stringLoop:
 
 _stringComplete:
 	
-	POP		EAX
-	CMP		EAX, 1
+;	POP		EAX
+	CMP		negFlag, 1
 	JNE		_displayString
 	MOV		AL, MINUS
 	STOSB
@@ -467,10 +503,6 @@ _revLoop:
 	
 	mDisplayString	OFFSET reversedString
 
-
-	
-
-	
 	
 	POP	ESI
 	POP	EBX
