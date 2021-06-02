@@ -23,7 +23,7 @@ INCLUDE Irvine32.inc
 ; lengthValue = maximum amount of characters to store
 ;	
 ; returns: user keyboard input stored in storeLocation
-;		   amount of bytes read in EAX
+;		   amount of bytes read in userInputLength
 ; ---------------------------------------------------------------------------------
 
 mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userInputLength:REQ
@@ -54,8 +54,8 @@ ENDM
 ;
 ; Displays string in console.
 ;
-; Preconditions: do not use EDX as argument
-; Postconditions: string at stringOffset printed to console
+; Preconditions: do not use EDX as argument (needs testing)
+; Postconditions: string starting at stringOffset printed to console
 ;
 ; Receives: stringOffset = offset of string to display
 ;	
@@ -92,24 +92,10 @@ MIN= -2147483648
 
 .data
 
-	; readval proc
-
 	enterNum		BYTE		"Enter a signed number: ",0
 	errorMsg		BYTE		"ERROR: Number too large, too long, or invalid",0
-;	storedString	BYTE		LENGTHLIMIT DUP(?) 
 	intHolder		SDWORD		?
 	intArray		SDWORD		MAXNUMS DUP(?)				; array of entered strings
-;	indexer			DWORD		0
-
-	; writeval proc
-
-;	someNum			SDWORD		2147483647
-;	outputString	BYTE		16 DUP(?)
-;	otherString		BYTE		"Hope this doesn't print",0
-;	reversedString	BYTE		16 DUP(?)
-	;doesThisWork	BYTE		"Testing",0,"Worked!"
-
-	; math proc
 	
 	sumInfo			BYTE		"The sum of the numbers is: ",0
 	averageInfo		BYTE		"The average of the numbers is: ",0
@@ -124,7 +110,7 @@ main PROC
 
 	; gets and converts MAXNUMS strings to an array of integers
 
-;	PUSH	OFFSET intArray
+
 	
 	MOV		ECX, MAXNUMS		; amount of strings to gather from user
 	MOV		EDI, OFFSET intArray
@@ -178,19 +164,20 @@ main ENDP
 ; ---------------------------------------------------------------------------------
 ; Name: ReadVal
 ; 
-; Converts a string of digits into a signed integerTranslator. 
+; Prompts user to enter a number, validates input, then converts string of digits into a signed integer. 
 ;
-; Preconditions: 
+; Preconditions: errorMsg, enterNum are global strings
+;				 intHolder is a global SDWORD
+;				 mGetString macro exists
 ;
-; Postconditions: 
+; Postconditions: none
 ;
 ; Receives: 
-; [ebp+16] = type of array element
-; [ebp+12] = length of array
-; [ebp+8] = address of array
-; arrayMsg, arrayError are global variables
+;			[EBP+8]  = offset of intHolder global SDWORD
+;			[EBP+12] = offset of enterNum global string
+;			[EBP+16] = offset of errorMsg global string
 ;
-; returns: eax = smallest integerTranslator
+; returns: intHolder = valid user input as an SDWORD
 ; ---------------------------------------------------------------------------------
 ReadVal PROC
 
@@ -202,9 +189,8 @@ ReadVal PROC
 
 	.code
 
-	;  TODO: RESTORE OTHER REGS
 	
-	PUSHAD
+	PUSHAD				; preserve registers
 
 	;prompts and fills userStrings array with input
 
@@ -214,21 +200,24 @@ _rePrompt:
 	;[EBP+16]=errormsg string
 	mGetString	[EBP+12], OFFSET storedString, LENGTHOF storedString, inputLength   ;need to get these from stack. 
 
-	; TODO some kind of length validations
+	; TODO some kind of length validations? might need to limit length
 
 
-	CMP			inputLength, 15
-	JGE			_invalidItem
+	CMP		inputLength, 15		; num too long
+	JGE		_invalidItem
 
-	CMP			inputLength,0		; user didn't enter anything
-	JE			_invalidItem
+	CMP		inputLength,0		; user didn't enter anything
+	JE		_invalidItem
+
+	CMP		inputLength, 1
+	JE		_
 
 
-	MOV			intAccumulator, 0 
-	MOV			ESI, OFFSET storedString
-	MOV			ECX, LENGTHOF storedString    
-	XOR			EAX, EAX	; clear accumulator for conversion
-	MOV			lengthCounter, 0
+	MOV		intAccumulator, 0 
+	MOV		ESI, OFFSET storedString
+	MOV		ECX, LENGTHOF storedString    
+	XOR		EAX, EAX	; clear accumulator for conversion
+	MOV		lengthCounter, 0
 	CLD
 
 _toIntLoop:
@@ -236,48 +225,62 @@ _toIntLoop:
 
 	; this all gets skipped after first digit checked for sign
 
-	INC			lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
-	CMP			lengthCounter, 1
-	JNE			_continueCalcs	; past the first digit, so don't check for sign
-	CMP			EAX, MINUS		; compare ascii of first digit with ascii of -
-	JNE			_checkPlus		; if no - sign present check for + sign
-	MOV			negBool, 1		; - sign present raise the negBool flag
-	LOOP		_toIntLoop		; move to next digit, a negative sign was found
+	INC		lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
+	CMP		lengthCounter, 1
+	JNE		_continueCalcs	; past the first digit, so don't check for sign
+	CMP		EAX, MINUS		; compare ascii of first digit with ascii of -
+	JNE		_checkPlus		; if no - sign present check for + sign
+	MOV		negBool, 1		; - sign present raise the negBool flag
+	LOOP	_toIntLoop		; move to next digit, a negative sign was found
 	
 _checkPlus:	
 	
-	CMP			EAX, PLUS		; compare ascii of first digit with ascii of +
-	JNE			_continueCalcs	; if no + sign present
-	LOOP		_toIntLoop		; move to next digit, nothing to calculate
+	CMP		EAX, PLUS		; compare ascii of first digit with ascii of +
+	JNE		_continueCalcs	; if no + sign present
+	LOOP	_toIntLoop		; move to next digit, nothing to calculate
 
 
 
 _continueCalcs:
 
 	; checks to see if the digit string is an actual numerical digit. 
-	CMP			EAX, 0			; end of the string (null terminator)
-	JE			_endCalculations
+	CMP		EAX, 0			; end of the string (null terminator)
+	JE		_endCalculations
 
-	CMP			EAX, ZERO
-	JL			_invalidItem	;invalid entry ascii was less than ZERO
-	CMP			EAX, NINE
-	JG			_invalidItem	;invalid entry ascii was greater than NINE
+	CMP		EAX, ZERO
+	JL		_invalidItem	;invalid entry ascii was less than ZERO
+	CMP		EAX, NINE
+	JG		_invalidItem	;invalid entry ascii was greater than NINE
 	
 
-	MOV			EBX, EAX		; store a copy in EBX
-	SUB			EAX, 48			; determines numerical representation of single valid digit
-	MOV			EBX, EAX		; 
-	MOV			EAX, intAccumulator	; gets the previous calculations
-	MOV			EDX, 10			; prepare for multiplication
-	IMUL		EDX				; 10(previous calculations)
+	MOV		EBX, EAX		; store a copy in EBX
+	SUB		EAX, 48			; determines numerical representation of single valid digit
+	MOV		EBX, EAX		; 
+	MOV		EAX, intAccumulator	; gets the previous calculations
+	MOV		EDX, 10			; prepare for multiplication
+	IMUL	EDX				; 10(previous calculations)
 	
-	JO			_invalidItem		; checks for overflow flag
 
-	ADD			EAX, EBX		; +(49-digit)
-	MOV			intAccumulator, EAX	; store accumulation
-	XOR			EAX, EAX		; reset eax
+	ADD		EAX, EBX		; +(49-digit)
+	MOV		intAccumulator, EAX	; store accumulation
+
+
+	JO		_overflowDetected		; checks for overflow flag
+
+
+	XOR		EAX, EAX		; reset eax
 
 	LOOP	_toIntLoop
+
+_overflowDetected:
+
+	CMP		negBool,1
+	JNE		_invalidItem
+	;MOV		EAX, MIN
+	;NEG		EAX
+	CMP		intAccumulator, MIN
+	JNE		_invalidItem
+
 
 _endCalculations:
 
@@ -307,36 +310,41 @@ _return:					; TODO: save the SDWORD into an array
 
 	; stores the valid input in the intArray array as SDWORDS
 
-	MOV	EDI, [EBP+8]	; OFFSET intHolder
-	MOV [EDI], EAX
-
-
-
-
+	MOV		EDI, [EBP+8]	; OFFSET intHolder
+	MOV		[EDI], EAX
 
 	POPAD
-	;POP	EDI
-	;POP	ECX
 
 
 _theEnd:	
 	RET 12
 ReadVal ENDP
 
+; ---------------------------------------------------------------------------------
+; Name: Math
+; 
+; Calculates and displays the sum and average (floor rounding) of an array.
+;
+; Preconditions: errorMsg, enterNum are global strings
+;				 intHolder is a global SDWORD
+;
+; Postconditions: none
+;
+; Receives: 
+;			[EBP+8]  = offset of intHolder global SDWORD
+;			[EBP+12] = offset of enterNum global string
+;			[EBP+16] = offset of errorMsg global string
+;
+; returns: intHolder = valid user input as an SDWORD
+; ---------------------------------------------------------------------------------
 
-
-; calculates sum and average
 Math PROC
 
 	PUSH	EBP
 	MOV		EBP, ESP
 	
 	PUSHAD
-;	PUSH	ECX
-;	PUSH	ESI
-;	PUSH	EAX
-;	PUSH	EBX
-;
+
 	
 	;[EBP+8]=intArray offset
 	;[EBP+12] = sumInfo
