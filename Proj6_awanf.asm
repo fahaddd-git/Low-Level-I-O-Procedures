@@ -5,7 +5,13 @@ TITLE  Low level I/O Procedure Program     (Proj6_awanf.asm)
 ; OSU email address:awanf@oregonstate.edu
 ; Course number/section:   CS271 Section 400
 ; Project Number:         6        Due Date: 6/6/2021
-; Description: 
+; Description: Program displays program title and programmer.
+;			   Program prompts user for 10 strings of digits up to 15 (inclusive) digits long.
+;			   Program validates that the string entry is valid and in the acceptable range of an SDWORD.
+;			   Program converts the 10 user entered strings to integers.
+;			   Program displays the user entered strings of digits.
+;			   Program calculates and displays the sum and average of the validated user input.
+;			   Program bids farewell.
 
 INCLUDE Irvine32.inc
 
@@ -26,13 +32,14 @@ INCLUDE Irvine32.inc
 ;		   amount of bytes read in userInputLength
 ; ---------------------------------------------------------------------------------
 
-mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userInputLength:REQ
+mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userInputLengthOffset:REQ
 	
 
 .code
 	PUSH	EDX
 	PUSH	ECX
 	PUSH	EAX
+	PUSH	EBX
 
 	MOV		EDX, promptOffset
 	CALL	WriteString
@@ -40,8 +47,9 @@ mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userI
 	MOV		EDX, storeLocationOffset	 ; point to the buffer
 	MOV		ECX, maxLength				 ; specify max characters
 	CALL	ReadString					 ; input the string
-	MOV		userInputLength, EAX
+	MOV		[userInputLengthOffset], EAX
 	
+	POP		EBX
 	POP		EAX
 	POP		ECX
 	POP		EDX
@@ -76,7 +84,7 @@ ENDM
 
 
 ; amount of integers to prompt/display
-MAXNUMS=3
+MAXNUMS=10
 
 ; ASCII codes
 PLUS=43
@@ -92,8 +100,10 @@ MIN= -2147483648
 
 .data
 
+	progTitle		BYTE		"Welcome to the Low level I/O Procedure Program by Fahad",13,10,13,10,0
+
 	enterNum		BYTE		"Enter a signed number: ",0
-	errorMsg		BYTE		"ERROR: Number too large, too long, or invalid",0
+	errorMsg		BYTE		"ERROR: Number too large, too long (15 digits max), or invalid",0
 	intHolder		SDWORD		?
 	intArray		SDWORD		MAXNUMS DUP(?)				
 	
@@ -102,47 +112,44 @@ MIN= -2147483648
 	delimiter		BYTE		"  ",0
 	userNumInfo		BYTE		"These are the numbers you entered:",13,10,0
 
+	farewell		BYTE		"Thanks for using this program! Bye!",13,10,0
+
 
 
 
 .code
 main PROC
 
-	; gets and converts MAXNUMS strings to an array of integers
 
-
+	mDisplayString OFFSET progTitle ; display prog title and progr name
 	
-	MOV		ECX, MAXNUMS		; amount of strings to gather from user
+
+	MOV		ECX, MAXNUMS			; amount of strings to gather from user
 	MOV		EDI, OFFSET intArray
 	
-_getNums:			; gets MAXNUMS numbers, converts to sdword, stores them in intArray
+	; prompts user for MAXNUMS amount of strings and converts them to SDWORDS
+
+_getNums:	
 	
 	PUSH	OFFSET	errorMsg
 	PUSH	OFFSET	enterNum
 	PUSH	OFFSET	intHolder
 	CALL	ReadVal
 	
-	
+	; stores the generated integer in an array
+
 	MOV		EAX, intHolder
 	MOV		[EDI], EAX
 	ADD		EDI, 4
 
 	LOOP	_getNums
 
-	
-	; calculate and stores sum and average
-	
-	PUSH	OFFSET	averageInfo
-	PUSH	OFFSET	sumInfo
-	PUSH	OFFSET	intArray
-	CALL	Math
+	; displays the array of user entered strings as strings
 
+	
 	CALL	CrLf
-	MOV		EDX, OFFSET userNumInfo
-	mDisplayString	EDX
+	mDisplayString	OFFSET userNumInfo
 
-	; prints userArray
-;
 	MOV		EDI, OFFSET intArray
 	MOV		ECX, LENGTHOF intArray
 
@@ -156,8 +163,27 @@ _printArray:
 	CALL	CrLf
 
 
+
+	; calculates, stores, and displays sum and average
+	
+	PUSH	OFFSET	averageInfo
+	PUSH	OFFSET	sumInfo
+	PUSH	OFFSET	intArray
+	CALL	Math
+
+	
+	; displays farewell message to the user
+	
+	CALL	CrLf
+	mDisplayString	OFFSET farewell
+
+
+
+
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
+
+
 
 
 
@@ -182,29 +208,29 @@ main ENDP
 ReadVal PROC
 
 	
-	LOCAL		lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD
-	
-	.data
-		storedString		BYTE		LENGTHLIMIT DUP(?)
-		negBool				BYTE		0 
+	LOCAL		lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD, negBool:BYTE, storedString[16]:BYTE
 
-	.code
 
 	
 	PUSHAD				; preserve registers
 
-	;prompts and fills userStrings array with input
+	; prompts user for input
 
 _rePrompt:
+	
+	MOV		negBool, 0
 
-	;[EBP+12]=enterNum string
-	;[EBP+16]=errormsg string
-	mGetString	[EBP+12], OFFSET storedString, LENGTHOF storedString, inputLength   ;need to get these from stack. 
 
-	; TODO some kind of length validations? might need to limit length
+	LEA		ECX, storedString
+	LEA		EBX, inputLength
+
+	mGetString	[EBP+12], ECX, LENGTHLIMIT, EBX
+
+
+	; validates length of user inputs
 
 	CMP		inputLength, 15		; num too long
-	JGE		_invalidItem
+	JG		_invalidItem
 
 	CMP		inputLength,0		; user didn't enter anything
 	JE		_invalidItem
@@ -213,7 +239,7 @@ _rePrompt:
 
 	CMP		inputLength, 1
 	JNE		_validLength
-	MOV		ESI, OFFSET storedString
+	LEA		ESI, storedString
 	LODSB	
 	CMP		AL, MINUS
 	JE		_invalidItem
@@ -225,7 +251,8 @@ _validLength:
 
 
 	MOV		intAccumulator, 0 
-	MOV		ESI, OFFSET storedString
+	LEA		ESI, storedString
+;	MOV		ESI, EBX ;OFFSET storedString
 	MOV		ECX, LENGTHOF storedString    
 	XOR		EAX, EAX	; clear accumulator for conversion
 	MOV		lengthCounter, 0
@@ -402,73 +429,85 @@ _sumLoop: ; iterates thru array adding nums
 Math ENDP
 
 
-WriteVal PROC
-	LOCAL	testNum:SDWORD, negFlag:DWORD, minFlag:DWORD
-	.data
-		outputString	BYTE	16 DUP(?)
-		reversedString	BYTE	16 DUP(?)
 
-	.code
+
+; ---------------------------------------------------------------------------------
+; Name: WriteVal
+; 
+; Converts and displays an SDWORD integer to a string and displays it in the console.
+;	Invokes mDisplayString macro.
+;
+; Preconditions: value to be converted is on the system stack at [EBP+8]
+;				 mDisplayString macro exists
+;
+; Postconditions: numerical string written to console
+;
+; Receives: 
+;			[EBP+8]  = value of validated SDWORD to be converted and written as a string
+;			
+; returns: none
+; ---------------------------------------------------------------------------------
+
+WriteVal PROC
+
+	LOCAL	testNum:SDWORD, negFlag:DWORD, minFlag:DWORD, outputString[16]:BYTE, reversedString[16]:BYTE
+	
 
 	PUSHAD
 
-	MOV		EAX, [EBP+8]
+	MOV		EAX, [EBP+8]		; value to be converted
 	MOV		testNum, EAX
 
-	
-	MOV		EDI, OFFSET outputString;outputString
-
-	MOV		AL,0 ; null terminator at beginning
-	
+	LEA		EDI, outputString
+	MOV		AL,0				; place null terminator at beginning	
 	STOSB
 	CLD
-	
-
-	;MOV		EDI, OFFSET outputString
-	
 
 	; determines if the number is positive or 0
 
 	CMP		testNum, -1
 	JG		_positiveOrZeroNum
 
-	; tests to see if this number is the minimum SDWORD special case
+	; tests to see if this number is the minimum SDWORD value special case
+
 	CMP		testNum, MIN
 	JNE		_notMinimumNum
-	MOV		minFlag, 1		; raise the min flag
+	MOV		minFlag, 1			; raise the min flag
 	
-	; all other negative numbers
+	; all other negative numbers. negate the number to positive and raise the negFlag.
+
 _notMinimumNum:
 
-	NEG		testNum
-	MOV		negFlag, 1 ;negFlag
-;	PUSH	EAX
+	NEG		testNum				
+	MOV		negFlag, 1			
 	JMP		_loopSetup
 	
+	; positive or 0 numbers
 
 _positiveOrZeroNum:
 	MOV		negFlag, 0
-;	PUSH	EAX
 
+
+	; sets up loop for string conversion.  Decrement the now positive number by 1 if min flag raised.
 
 _loopSetup:
 	
 	MOV		EAX, testNum
-
-
 	CMP		minFlag,1
 	JNE		_notSpecialCase
-	DEC		EAX			; decrement the max num
+	DEC		EAX					; decrement the max num
 
 _notSpecialCase:
-	MOV		EBX, 10		; divisor
+	MOV		EBX, 10				; divisor
 	MOV		ECX, LENGTHOF outputString	
 
-
+	; loops through the integer dividing by 10 until 0. Adds 48 to each remainder which determines the
+	; current digit's ASCII value.  If the special case minFlag is raised increments the final digit from 7 to 8.
+	; stores the string (in reverse) in outputString
 
 _stringLoop:
 
-;	XOR		EDX, EDX
+
 
 	CDQ					; prep div
 
@@ -492,15 +531,11 @@ _continueLoop:
 	CMP		EAX, 0
 	JE		_stringComplete
 
-
-
-
-
 	LOOP	_stringLoop
 
 _stringComplete:
 	
-;	POP		EAX
+
 	CMP		negFlag, 1
 	JNE		_displayString
 	MOV		AL, MINUS
@@ -511,8 +546,10 @@ _stringComplete:
 _displayString:
 
 	; need to reverse string for display here
-	MOV		EDI, OFFSET reversedString
-	MOV		ESI, OFFSET outputString
+	LEA		EDI, reversedString
+	LEA		ESI, outputString
+;	MOV		EDI, OFFSET reversedString
+;	MOV		ESI, OFFSET outputString
 	ADD		ESI, LENGTHOF reversedString ; point at end of outputString
 	DEC		ECX
 	SUB		ESI, ECX
@@ -527,19 +564,14 @@ _revLoop:
 	STOSB
 	LOOP	_revLoop
 
-	
-	
-	mDisplayString	OFFSET reversedString
-
-
+	LEA		EAX, reversedString
+	mDisplayString	EAX;OFFSET reversedString
 
 	POPAD
 
 	RET		4
 
 WriteVal ENDP
-
-
 
 
 END main
