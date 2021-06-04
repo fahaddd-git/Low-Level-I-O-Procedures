@@ -20,33 +20,38 @@ INCLUDE Irvine32.inc
 ;
 ; Displays prompt then get's user's keyboard input into a memory location.
 ;
-; Preconditions: do not use eax, ecx as arguments
-; Postconditions: EAX modified
+; Preconditions: promptOffset, storeLocationOffset, and userInputLengthOffset must be mem addresses
+;
+; Postconditions: string at promptOffset written to console
+;				  user prompted for input			  
 ;
 ; Receives:
-; promptOffset = prompt string offset
-; storeLocation = variable to store user input
-; lengthValue = maximum amount of characters to store
+;			promptOffset = offset of string used to prompt user 
+;			storeLocationOffset = offset of array in which to store user input
+;			maxLength = maximum amount of characters to store
+;			userInputLengthOffset = offset of where to store amount of bytes user enters
 ;	
 ; returns: user keyboard input stored in storeLocation
-;		   amount of bytes read in userInputLength
+;		   amount of bytes read in where userInputLengthOffset points
 ; ---------------------------------------------------------------------------------
 
 mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userInputLengthOffset:REQ
 	
-
-.code
 	PUSH	EDX
 	PUSH	ECX
 	PUSH	EAX
 	PUSH	EBX
 
+	; displays string in console
 	MOV		EDX, promptOffset
 	CALL	WriteString
 	
+	; prompts user for data
 	MOV		EDX, storeLocationOffset	 ; point to the buffer
 	MOV		ECX, maxLength				 ; specify max characters
-	CALL	ReadString					 ; input the string
+	CALL	ReadString
+	
+	; stores amount of bytes read
 	MOV		[userInputLengthOffset], EAX
 	
 	POP		EBX
@@ -60,31 +65,30 @@ ENDM
 ; ---------------------------------------------------------------------------------
 ; Name: mDisplayString
 ;
-; Displays string in console.
+; Displays given string in console.
 ;
-; Preconditions: do not use EDX as argument (untrue)
+; Preconditions: none
+;
 ; Postconditions: string starting at stringOffset printed to console
 ;
 ; Receives: stringOffset = offset of string to display
-;	
-;	
-; returns: none
-;		   
+;		
+; Returns: none
+;
 ; ---------------------------------------------------------------------------------
 
 mDisplayString MACRO stringOffset:REQ
 
-	PUSH	EDX
-	
+	PUSH	EDX	
 	MOV		EDX, stringOffset
 	CALL	WriteString
-	
 	POP		EDX
+
 ENDM
 
 
 ; amount of integers to prompt/display
-MAXNUMS=10
+MAXNUMS=3
 
 ; ASCII codes
 PLUS=43
@@ -120,14 +124,19 @@ MIN= -2147483648
 .code
 main PROC
 
+	; display prog title and progr name
 
-	mDisplayString OFFSET progTitle ; display prog title and progr name
+	mDisplayString OFFSET progTitle 
 	
-
+;--------------------------------------------------------------------------------------------	
+; Prompt user for input and store in array.
+;		Queries user for MAXNUMS amount of strings and converts them to SDWORDS. Then, stores
+;		converted strings in an array.
+;--------------------------------------------------------------------------------------------
 	MOV		ECX, MAXNUMS			; amount of strings to gather from user
 	MOV		EDI, OFFSET intArray
-	
-	; prompts user for MAXNUMS amount of strings and converts them to SDWORDS
+
+	; loop MAXNUMS times calling ReadVal procedure
 
 _getNums:	
 	
@@ -143,15 +152,21 @@ _getNums:
 	ADD		EDI, 4
 
 	LOOP	_getNums
-
-	; displays the array of user entered strings as strings
-
-	
 	CALL	CrLf
+
+
+;--------------------------------------------------------------------------------------------	
+; Display stored array as strings.
+;		Loops through SDWORD array converting each element to a string using the WriteVal
+;		procedure and then display string using mDisplayString macro.
+;--------------------------------------------------------------------------------------------
+
 	mDisplayString	OFFSET userNumInfo
 
 	MOV		EDI, OFFSET intArray
 	MOV		ECX, LENGTHOF intArray
+
+	; loop through array, convert to string, display
 
 _printArray:
 	MOV		EAX, [EDI]
@@ -162,22 +177,24 @@ _printArray:
 	LOOP	_printArray
 	CALL	CrLf
 
+;--------------------------------------------------------------------------------------------	
+; Calculate and display sum and average.
+;		Uses SDWORD array to calculate and display the sum and average of the converted
+;		to integer user entered strings.
+;--------------------------------------------------------------------------------------------
 
-
-	; calculates, stores, and displays sum and average
 	
 	PUSH	OFFSET	averageInfo
 	PUSH	OFFSET	sumInfo
 	PUSH	OFFSET	intArray
 	CALL	Math
 
+	CALL	CrLf
+
 	
 	; displays farewell message to the user
 	
-	CALL	CrLf
 	mDisplayString	OFFSET farewell
-
-
 
 
 	Invoke ExitProcess,0	; exit to operating system
@@ -187,10 +204,10 @@ main ENDP
 
 
 
-; ---------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------------------------
 ; Name: ReadVal
 ; 
-; Prompts user to enter a number, validates input, then converts string of digits into a signed integer. 
+; Prompts user to enter a number, validates input, then converts string of digits into a SDWORD. 
 ;
 ; Preconditions: errorMsg, enterNum are global strings
 ;				 intHolder is a global SDWORD
@@ -204,38 +221,33 @@ main ENDP
 ;			[EBP+16] = offset of errorMsg global string
 ;
 ; returns: intHolder = valid user input as an SDWORD
-; ---------------------------------------------------------------------------------
+; ---------------------------------------------------------------------------------------------------
+
 ReadVal PROC
 
-	
 	LOCAL		lengthCounter:DWORD, intAccumulator:SDWORD, inputLength:DWORD, negBool:BYTE, storedString[16]:BYTE
 
-
 	
-	PUSHAD				; preserve registers
+	PUSHAD	; preserve registers
 
 	; prompts user for input
 
 _rePrompt:
 	
 	MOV		negBool, 0
-
-
 	LEA		ECX, storedString
 	LEA		EBX, inputLength
-
 	mGetString	[EBP+12], ECX, LENGTHLIMIT, EBX
 
 
-	; validates length of user inputs
+	; validates length of user inputs 0<length<16
 
 	CMP		inputLength, 15		; num too long
 	JG		_invalidItem
-
 	CMP		inputLength,0		; user didn't enter anything
 	JE		_invalidItem
 
-	; user entered only a + or - sign
+	; checks if user entered only a + or - sign
 
 	CMP		inputLength, 1
 	JNE		_validLength
@@ -246,71 +258,92 @@ _rePrompt:
 	CMP		AL, PLUS
 	JE		_invalidItem
 
+;--------------------------------------------------------------------------------
+; Checks user string for + or -.
+;	User input passed initial length checks. Validates and records whether a 
+;	sign (+ or -) is present in the beginning of the string.
+;--------------------------------------------------------------------------------
+
+	; loads user string for use with string primitive and conversion loop
 
 _validLength:
 
-
 	MOV		intAccumulator, 0 
 	LEA		ESI, storedString
-;	MOV		ESI, EBX ;OFFSET storedString
 	MOV		ECX, LENGTHOF storedString    
-	XOR		EAX, EAX	; clear accumulator for conversion
+	XOR		EAX, EAX			; clear accumulator for conversion
 	MOV		lengthCounter, 0
 	CLD
 
+	; validates if a + or - sign is present in the beginning of string
+
 _toIntLoop:
-	LODSB						; load string digit from inString into AL
-
-	; this all gets skipped after first digit checked for sign
-
+	
+	LODSB						
 	INC		lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
 	CMP		lengthCounter, 1
 	JNE		_continueCalcs	; past the first digit, so don't check for sign
-	CMP		EAX, MINUS		; compare ascii of first digit with ascii of -
-	JNE		_checkPlus		; if no - sign present check for + sign
+	
+	
+	; compares ascii code of - with digit present at beginning of string
+	
+	CMP		EAX, MINUS		
+	JNE		_checkPlus		
 	MOV		negBool, 1		; - sign present raise the negBool flag
-	LOOP	_toIntLoop		; move to next digit, a negative sign was found
+	LOOP	_toIntLoop	
+	
+	; compares ascii code of + with digit present at beginning of string
 	
 _checkPlus:	
 	
-	CMP		EAX, PLUS		; compare ascii of first digit with ascii of +
-	JNE		_continueCalcs	; if no + sign present
-	LOOP	_toIntLoop		; move to next digit, nothing to calculate
+	CMP		EAX, PLUS		
+	JNE		_continueCalcs	
+	LOOP	_toIntLoop		
 
+
+;--------------------------------------------------------------------------------
+; Main string to integer conversion loop.
+;	User input passed sign checks. Validates each digit of the remaining string to
+;	be an ASCII character 0-9. Determines numerical representation of each digit
+;	using formula  numInt = 10 * numInt + (numChar - 48). If an overflow or carry occurs
+;	the current number is checked to see if it is the special case of the minimum
+;	SDWORD else the current number is invalidated.
+;--------------------------------------------------------------------------------
 
 
 _continueCalcs:
 
-	; checks to see if the digit string is an actual numerical digit. 
 	CMP		EAX, 0			; end of the string (null terminator)
 	JE		_endCalculations
 
+	; validates if each character ASCII is ASCII representation of 0-9 
+
 	CMP		EAX, ZERO
-	JL		_invalidItem	;invalid entry ascii was less than ZERO
+	JL		_invalidItem	
 	CMP		EAX, NINE
-	JG		_invalidItem	;invalid entry ascii was greater than NINE
+	JG		_invalidItem	
 	
+	; determines numerical representation of each character
 
-	MOV		EBX, EAX		; store a copy in EBX
-	SUB		EAX, 48			; determines numerical representation of single valid digit
-	MOV		EBX, EAX		; 
-	MOV		EAX, intAccumulator	; gets the previous calculations
-	MOV		EDX, 10			; prepare for multiplication
-	IMUL	EDX				; 10(previous calculations)
+	MOV		EBX, EAX		
+	SUB		EAX, 48			
+	MOV		EBX, EAX		 
+	MOV		EAX, intAccumulator		; the previous calculations
+	MOV		EDX, 10			
+	IMUL	EDX						; 10(previous calculations)
 	
-	JC		_invalidItem	; carry flag 
+	; checks if carry or overflow flags have been raised in event of invalid number
+
+	JC		_invalidItem	
+	ADD		EAX, EBX		
+	MOV		intAccumulator, EAX		; store accumulation
+	JO		_overflowDetected		
 
 
-	ADD		EAX, EBX		; +(49-digit)
-	MOV		intAccumulator, EAX	; store accumulation
-
-
-	JO		_overflowDetected		; checks for overflow flag
-
-
-	XOR		EAX, EAX		; reset eax
-
+	XOR		EAX, EAX		
 	LOOP	_toIntLoop
+
+	; handles with overflow events and the special case of the smallest SDWORD
 
 _overflowDetected:
 
@@ -319,60 +352,69 @@ _overflowDetected:
 	CMP		intAccumulator, MIN
 	JNE		_invalidItem
 
+	; replaces the negative sign if needed
 
 _endCalculations:
 
 	CMP			negBool, 1
 	JNE			_writeToConsole
 	NEG			intAccumulator		; negBool was raised, negate the number
-	MOV			negBool, 0			; reset negBool
+	MOV			negBool, 0			
 
 _writeToConsole:
 
 	MOV		EAX, intAccumulator
 	JMP		_return
 
-	; invalid entries 
+	
+	; invalid entries. display error message, reprompt user. 
 
 _invalidItem:
 
-	mDisplayString	[EBP+16]	; display errorMsg string
+	mDisplayString	[EBP+16]	; displays errorMsg string
 	CALL	CrLf
 	MOV		negBool, 0			; reset negBool
 	JMP		_rePrompt			; prompt user again for valid input
 
+
+	; stores the validated generated SDWORD in global variable intHolder
+
 _return:					
-
-
-
-	; stores the valid input in the intArray array as SDWORDS
 
 	MOV		EDI, [EBP+8]	; OFFSET intHolder
 	MOV		[EDI], EAX
 
+
+	; restores registers and control
+	
 	POPAD
-
-
-_theEnd:	
 	RET 12
+
 ReadVal ENDP
 
 ; ---------------------------------------------------------------------------------
 ; Name: Math
 ; 
 ; Calculates and displays the sum and average (floor rounding) of an array.
+;	Invokes mDisplayString. Calls WriteVal.
 ;
-; Preconditions: errorMsg, enterNum are global strings
-;				 intHolder is a global SDWORD
+; Preconditions: intArray is of type SDWORD
+;				 offset of sumInfo, offset of averageInfo, and intArray on system stack
+;				 mDisplayString macro and WriteVal procedures exist.
+;				 MAXNUMS constant exists.
+;				 
 ;
-; Postconditions: none
+; Postconditions: sumInfo string written to console
+;				  sum of intArray written to console as string
+;				  averageInfo string written to console
+;				  average of intArray written to console as string
 ;
-; Receives: 
-;			[EBP+8]  = offset of intHolder global SDWORD
-;			[EBP+12] = offset of enterNum global string
-;			[EBP+16] = offset of errorMsg global string
+; Receives: 				
+;			[EBP+8]  = starting address of intArray 
+;			[EBP+12] = starting address of sumInfo 
+;			[EBP+16] = starting address of averageInfo
 ;
-; returns: intHolder = valid user input as an SDWORD
+; returns: none
 ; ---------------------------------------------------------------------------------
 
 Math PROC
@@ -380,49 +422,49 @@ Math PROC
 	PUSH	EBP
 	MOV		EBP, ESP
 	
-	PUSHAD
+	PUSHAD					; preserve registers
 
-	
-	;[EBP+8]=intArray offset
-	;[EBP+12] = sumInfo
-	;[EBP+16]=averageInfo
+	; sets up summation loop and prepares for accumulation
 
-
-	MOV		ECX, MAXNUMS	; loop maxnums times
+	MOV		ECX, MAXNUMS	
 	MOV		ESI, [EBP+8]	; intArray offset
-	XOR		EAX, EAX		; prepare for accumulation
+	XOR		EAX, EAX		; clear for accumulation
 
-_sumLoop: ; iterates thru array adding nums
+	; iterates thru array adding each number in array
+
+_sumLoop:
 	
 	ADD		EAX, [ESI]
 	ADD		ESI, 4
 	LOOP	_sumLoop
-
 	CALL	CrLf		
 
+	mDisplayString [EBP+12]		; displays sumInfo string
 
-	mDisplayString [EBP+12]  ; displays sumInfo
-
+	; passes the calculated sum to WriteVal procedure to convert and display as string
 	
-	PUSH	EAX				; the sum
+	PUSH	EAX					; sum integer
 	CALL	WriteVal
 	CALL	CrLf
 
-	; calc/display avg
+	; calculates average (floor rounding)
 
-	CDQ						; sign extend
+	CDQ							; sign extend
 	MOV		EBX, MAXNUMS	
-	IDIV	EBX				; divide by amount of user inputs
+	IDIV	EBX					; divide by amount of user inputs
 	CALL	CrLf
+	
+	mDisplayString [EBP+16]		;displays averageInfo string
 
-	mDisplayString [EBP+16]		;averageInfo strng
+	; passes the calculated average to WriteVal procedure to convert and display as string
 
-	PUSH	EAX						; the average
+	PUSH	EAX					; average integer
 	CALL	WriteVal				
 	CALL	CrLf
 
-	POPAD
+	; restores registers and returns control
 
+	POPAD
 	POP		EBP
 	RET		12
 
@@ -437,10 +479,10 @@ Math ENDP
 ; Converts and displays an SDWORD integer to a string and displays it in the console.
 ;	Invokes mDisplayString macro.
 ;
-; Preconditions: value to be converted is on the system stack at [EBP+8]
+; Preconditions: value to be converted is on top of the system stack before procedure called
 ;				 mDisplayString macro exists
 ;
-; Postconditions: numerical string written to console
+; Postconditions: string of digits written to console
 ;
 ; Receives: 
 ;			[EBP+8]  = value of validated SDWORD to be converted and written as a string
@@ -459,7 +501,7 @@ WriteVal PROC
 	MOV		testNum, EAX
 
 	LEA		EDI, outputString
-	MOV		AL,0				; place null terminator at beginning	
+	MOV		AL,0				; place null terminator at beginning of string
 	STOSB
 	CLD
 
@@ -533,6 +575,8 @@ _continueLoop:
 
 	LOOP	_stringLoop
 
+	; stores the negative sign if the negFlag was raised
+
 _stringComplete:
 	
 
@@ -540,22 +584,22 @@ _stringComplete:
 	JNE		_displayString
 	MOV		AL, MINUS
 	STOSB
-	DEC		ECX  ;accomodates for - sign
+	DEC		ECX					; accomodates for - sign
 
+
+	; reverses the ouputString for proper display
 
 _displayString:
 
-	; need to reverse string for display here
 	LEA		EDI, reversedString
 	LEA		ESI, outputString
-;	MOV		EDI, OFFSET reversedString
-;	MOV		ESI, OFFSET outputString
-	ADD		ESI, LENGTHOF reversedString ; point at end of outputString
-	DEC		ECX
-	SUB		ESI, ECX
+
+	ADD		ESI, LENGTHOF reversedString	 ; points at end of outputString
+	DEC		ECX								 ; accounts for the possible - sign
+	SUB		ESI, ECX						 ; moves pointer backwards
 	MOV		ECX, LENGTHOF reversedString
 
-;	DEC		ESI
+	; stores outputString in reverse into reversedString
 
 _revLoop:
 	STD
@@ -564,11 +608,14 @@ _revLoop:
 	STOSB
 	LOOP	_revLoop
 
+	; displays reversedString
+
 	LEA		EAX, reversedString
-	mDisplayString	EAX;OFFSET reversedString
+	mDisplayString	EAX		
+
+	; restores registers and returns control
 
 	POPAD
-
 	RET		4
 
 WriteVal ENDP
