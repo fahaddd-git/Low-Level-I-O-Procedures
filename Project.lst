@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 21:00:33
 5Low level I/O Procedure Program     (Proj6_awanf.asm	     Page 1 - 1
 
 
@@ -109,14 +109,13 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 
 
 				; amount of integers to prompt/display
- = 00000003			MAXNUMS=3
+ = 0000000A			MAXNUMS=10
 
 				; ASCII codes
  = 0000002B			PLUS=43
  = 0000002D			MINUS=45
  = 00000030			ZERO=48
  = 00000039			NINE=57
-
  = 00000096			LENGTHLIMIT=150
 
 				; sdword limits
@@ -157,25 +156,25 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 	   6E 76 61 6C 69
 	   64 00
  00000092 00000000			intHolder		SDWORD		?
- 00000096  00000003 [			intArray		SDWORD		MAXNUMS DUP(?)				
+ 00000096  0000000A [			intArray		SDWORD		MAXNUMS DUP(?)				
 	    00000000
 	   ]
 					
- 000000A2 54 68 65 20 73		sumInfo			BYTE		"The sum of the numbers is: ",0
+ 000000BE 54 68 65 20 73		sumInfo			BYTE		"The sum of the numbers is: ",0
 	   75 6D 20 6F 66
 	   20 74 68 65 20
 	   6E 75 6D 62 65
 	   72 73 20 69 73
 	   3A 20 00
- 000000BE 54 68 65 20 61		averageInfo		BYTE		"The average of the numbers is: ",0
+ 000000DA 54 68 65 20 61		averageInfo		BYTE		"The average of the numbers is: ",0
 	   76 65 72 61 67
 	   65 20 6F 66 20
 	   74 68 65 20 6E
 	   75 6D 62 65 72
 	   73 20 69 73 3A
 	   20 00
- 000000DE 20 20 00			delimiter		BYTE		"  ",0
- 000000E1 54 68 65 73 65		userNumInfo		BYTE		"These are the numbers you entered:",13,10,0
+ 000000FA 20 20 00			delimiter		BYTE		"  ",0
+ 000000FD 54 68 65 73 65		userNumInfo		BYTE		"These are the numbers you entered:",13,10,0
 	   20 61 72 65 20
 	   74 68 65 20 6E
 	   75 6D 62 65 72
@@ -184,7 +183,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 	   72 65 64 3A 0D
 	   0A 00
 
- 00000106 54 68 61 6E 6B		farewell		BYTE		"Thanks for using this program! Bye!",13,10,0
+ 00000122 54 68 61 6E 6B		farewell		BYTE		"Thanks for using this program! Bye!",13,10,0
 	   73 20 66 6F 72
 	   20 75 73 69 6E
 	   67 20 74 68 69
@@ -212,7 +211,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 				;		Queries user for MAXNUMS amount of strings and converts them to SDWORDS. Then, stores
 				;		converted strings in an array.
 				;--------------------------------------------------------------------------------------------
- 0000000C  B9 00000003			MOV		ECX, MAXNUMS			; amount of strings to gather from user
+ 0000000C  B9 0000000A			MOV		ECX, MAXNUMS			; amount of strings to gather from user
  00000011  BF 00000096 R		MOV		EDI, OFFSET intArray
 
 					; loop MAXNUMS times calling ReadVal procedure
@@ -242,12 +241,12 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 
 					mDisplayString	OFFSET userNumInfo
  0000003B  52		     1		PUSH	EDX	
- 0000003C  BA 000000E1 R     1		MOV		EDX, OFFSET userNumInfo
+ 0000003C  BA 000000FD R     1		MOV		EDX, OFFSET userNumInfo
  00000041  E8 00000000 E     1		CALL	WriteString
  00000046  5A		     1		POP		EDX
 
  00000047  BF 00000096 R		MOV		EDI, OFFSET intArray
- 0000004C  B9 00000003			MOV		ECX, LENGTHOF intArray
+ 0000004C  B9 0000000A			MOV		ECX, LENGTHOF intArray
 
 					; loop through array, convert to string, display
 
@@ -257,7 +256,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  00000054  E8 0000019A			CALL	WriteVal
 					mDisplayString	OFFSET delimiter
  00000059  52		     1		PUSH	EDX	
- 0000005A  BA 000000DE R     1		MOV		EDX, OFFSET delimiter
+ 0000005A  BA 000000FA R     1		MOV		EDX, OFFSET delimiter
  0000005F  E8 00000000 E     1		CALL	WriteString
  00000064  5A		     1		POP		EDX
  00000065  83 C7 04			ADD		EDI, 4
@@ -271,8 +270,8 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 				;--------------------------------------------------------------------------------------------
 
 					
- 0000006F  68 000000BE R		PUSH	OFFSET	averageInfo
- 00000074  68 000000A2 R		PUSH	OFFSET	sumInfo
+ 0000006F  68 000000DA R		PUSH	OFFSET	averageInfo
+ 00000074  68 000000BE R		PUSH	OFFSET	sumInfo
  00000079  68 00000096 R		PUSH	OFFSET	intArray
  0000007E  E8 0000011A			CALL	Math
 
@@ -283,7 +282,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 					
 					mDisplayString	OFFSET farewell
  00000088  52		     1		PUSH	EDX	
- 00000089  BA 00000106 R     1		MOV		EDX, OFFSET farewell
+ 00000089  BA 00000122 R     1		MOV		EDX, OFFSET farewell
  0000008E  E8 00000000 E     1		CALL	WriteString
  00000093  5A		     1		POP		EDX
 
@@ -301,10 +300,12 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 				; Name: ReadVal
 				; 
 				; Prompts user to enter a number, validates input, then converts string of digits into a SDWORD. 
+				;	Invokes mGetString macro.
 				;
 				; Preconditions: errorMsg, enterNum are global strings
 				;				 intHolder is a global SDWORD
 				;				 mGetString macro exists
+				;				 offset of intHolder, offset of enterNum, offset of errorMsg on system stack
 				;
 				; Postconditions: none
 				;
@@ -396,7 +397,6 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  00000115  83 7D FC 01			CMP		lengthCounter, 1
  00000119  75 12			JNE		_continueCalcs	; past the first digit, so don't check for sign
 					
-					
 					; compares ascii code of - with digit present at beginning of string
 					
  0000011B  83 F8 2D			CMP		EAX, MINUS		
@@ -479,7 +479,6 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  00000176  8B 45 F8			MOV		EAX, intAccumulator
  00000179  EB 18			JMP		_return
 
-					
 					; invalid entries. display error message, reprompt user. 
 
  0000017B			_invalidItem:
@@ -493,14 +492,12 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  0000018A  C6 45 F3 00			MOV		negBool, 0			; reset negBool
  0000018E  E9 FFFFFF0F			JMP		_rePrompt			; prompt user again for valid input
 
-
 					; stores the validated generated SDWORD in global variable intHolder
 
  00000193			_return:					
 
  00000193  8B 7D 08			MOV		EDI, [EBP+8]	; OFFSET intHolder
  00000196  89 07			MOV		[EDI], EAX
-
 
 					; restores registers and control
 					
@@ -510,7 +507,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 
  0000019D			ReadVal ENDP
 
-				; ---------------------------------------------------------------------------------
+				;---------------------------------------------------------------------------------
 				; Name: Math
 				; 
 				; Calculates and displays the sum and average (floor rounding) of an array.
@@ -544,7 +541,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 
 					; sets up summation loop and prepares for accumulation
 
- 000001A1  B9 00000003			MOV		ECX, MAXNUMS	
+ 000001A1  B9 0000000A			MOV		ECX, MAXNUMS	
  000001A6  8B 75 08			MOV		ESI, [EBP+8]	; intArray offset
  000001A9  33 C0			XOR		EAX, EAX		; clear for accumulation
 
@@ -572,7 +569,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 					; calculates average (floor rounding)
 
  000001CC  99				CDQ							; sign extend
- 000001CD  BB 00000003			MOV		EBX, MAXNUMS	
+ 000001CD  BB 0000000A			MOV		EBX, MAXNUMS	
  000001D2  F7 FB			IDIV	EBX					; divide by amount of user inputs
  000001D4  E8 00000000 E		CALL	CrLf
 					
@@ -607,6 +604,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 				;
 				; Preconditions: value to be converted is on top of the system stack before procedure called
 				;				 mDisplayString macro exists
+				;				 received SDWORD has been validated by ReadVal procedure
 				;
 				; Postconditions: string of digits written to console
 				;
@@ -626,6 +624,8 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  000001F6  83 C4 D4	   *	    add    esp, 0FFFFFFD4h
  000001F9  60				PUSHAD
 
+					; loads the value to be converted and sets flags for conversion
+
  000001FA  8B 45 08			MOV		EAX, [EBP+8]		; value to be converted
  000001FD  89 45 FC			MOV		testNum, EAX
 
@@ -634,6 +634,12 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  00000205  AA				STOSB
  00000206  FC				CLD
 
+				;---------------------------------------------------------------------------------
+				; Sets local boolean flags.
+				;	Determines and sets various local flags based on whether the number is 0, +, -, or
+				;	the special case minimum SDWORD.
+				;---------------------------------------------------------------------------------
+					
 					; determines if the number is positive or 0
 
  00000207  83 7D FC FF			CMP		testNum, -1
@@ -662,8 +668,13 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  00000229  C7 45 F8			MOV		negFlag, 0
 	   00000000
 
-
-					; sets up loop for string conversion.  Decrement the now positive number by 1 if min flag raised.
+				;----------------------------------------------------------------------------------
+				; String conversion loop.
+				;	Sets up string conversion loop. In the event the special case minimum SDWORD was 
+				;	detected, decrements the now positive value by 1. Converts to string by dividing
+				;	by 10 and adding 48 to the remainder until the original integer reaches 0. This determines
+				;	each character's ASCII value. Stores representation in outputString in reverse.
+				;---------------------------------------------------------------------------------
 
  00000230			_loopSetup:
 					
@@ -676,57 +687,55 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
  0000023A  BB 0000000A			MOV		EBX, 10				; divisor
  0000023F  B9 00000010			MOV		ECX, LENGTHOF outputString	
 
-					; loops through the integer dividing by 10 until 0. Adds 48 to each remainder which determines the
-					; current digit's ASCII value.  If the special case minFlag is raised increments the final digit from 7 to 8.
-					; stores the string (in reverse) in outputString
+					; divides by 10, adds 48 to remainder
 
  00000244			_stringLoop:
 
-
-
  00000244  99				CDQ					; prep div
-
  00000245  F7 FB			IDIV	EBX
  00000247  50				PUSH	EAX
  00000248  8A C2			MOV		AL, DL
  0000024A  04 30			ADD		AL, 48
 
 					; special case min flag raised
+
  0000024C  83 7D F4 01			CMP		minFlag, 1
  00000250  75 05			JNE		_continueLoop
  00000252  FF 4D F4			DEC		minFlag			; set minFlagg to 0
  00000255  FE C0			INC		AL				; change the digit from 7 to 8
 					
+					; stores calculated ASCII values in outputString
 
  00000257			_continueLoop:
+
  00000257  AA				STOSB
-
-
  00000258  58				POP		EAX
  00000259  83 F8 00			CMP		EAX, 0
  0000025C  74 02			JE		_stringComplete
-
  0000025E  E2 E4			LOOP	_stringLoop
 
 					; stores the negative sign if the negFlag was raised
 
  00000260			_stringComplete:
 					
-
  00000260  83 7D F8 01			CMP		negFlag, 1
  00000264  75 04			JNE		_displayString
  00000266  B0 2D			MOV		AL, MINUS
  00000268  AA				STOSB
  00000269  49				DEC		ECX					; accomodates for - sign
 
+				;---------------------------------------------------------------------------------
+				; Reverses ouputString and displays reversedString.
+				;	Indexes into reversedString to determine where to start storing digits. Writes
+				;	the reverse of outputString to reversedString.
+				;---------------------------------------------------------------------------------
 
-					; reverses the ouputString for proper display
+					; sets up location where to begin storing string
 
  0000026A			_displayString:
 
  0000026A  8D 7D D4			LEA		EDI, reversedString
  0000026D  8D 75 E4			LEA		ESI, outputString
-
  00000270  83 C6 10			ADD		ESI, LENGTHOF reversedString	 ; points at end of outputString
  00000273  49				DEC		ECX								 ; accounts for the possible - sign
  00000274  2B F1			SUB		ESI, ECX						 ; moves pointer backwards
@@ -760,7 +769,7 @@ Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
 
 
 				END main
-Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 20:30:39
+Microsoft (R) Macro Assembler Version 14.28.29914.0	    06/03/21 21:00:33
 5Low level I/O Procedure Program     (Proj6_awanf.asm	     Symbols 2 - 1
 
 
@@ -862,7 +871,7 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000012C Para	  Public  'DATA'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000148 Para	  Public  'DATA'	
 _TEXT  . . . . . . . . . . . . .	32 Bit	 00000292 Para	  Public  'CODE'	
 
 
@@ -1098,7 +1107,7 @@ KEY_MASKS  . . . . . . . . . . .	Number	 0000001Fh
 LEFT_ALT_PRESSED . . . . . . . .	Number	 00000002h   
 LEFT_CTRL_PRESSED  . . . . . . .	Number	 00000008h   
 LENGTHLIMIT  . . . . . . . . . .	Number	 00000096h   
-MAXNUMS  . . . . . . . . . . . .	Number	 00000003h   
+MAXNUMS  . . . . . . . . . . . .	Number	 0000000Ah   
 MAX  . . . . . . . . . . . . . .	Number	 7FFFFFFFh   
 MB_ABORTRETRYIGNORE  . . . . . .	Number	 00000002h   
 MB_APPLMODAL . . . . . . . . . .	Number	 00000000h   
@@ -1232,16 +1241,16 @@ WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h
 WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
 WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
 ZERO . . . . . . . . . . . . . .	Number	 00000030h   
-averageInfo  . . . . . . . . . .	Byte	 000000BE _DATA	
+averageInfo  . . . . . . . . . .	Byte	 000000DA _DATA	
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
-delimiter  . . . . . . . . . . .	Byte	 000000DE _DATA	
+delimiter  . . . . . . . . . . .	Byte	 000000FA _DATA	
 enterNum . . . . . . . . . . . .	Byte	 0000003C _DATA	
 errorMsg . . . . . . . . . . . .	Byte	 00000054 _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
-farewell . . . . . . . . . . . .	Byte	 00000106 _DATA	
+farewell . . . . . . . . . . . .	Byte	 00000122 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
 intArray . . . . . . . . . . . .	DWord	 00000096 _DATA	
@@ -1255,8 +1264,8 @@ lightRed . . . . . . . . . . . .	Number	 0000000Ch
 magenta  . . . . . . . . . . . .	Number	 00000005h   
 progTitle  . . . . . . . . . . .	Byte	 00000000 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-sumInfo  . . . . . . . . . . . .	Byte	 000000A2 _DATA	
-userNumInfo  . . . . . . . . . .	Byte	 000000E1 _DATA	
+sumInfo  . . . . . . . . . . . .	Byte	 000000BE _DATA	
+userNumInfo  . . . . . . . . . .	Byte	 000000FD _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   

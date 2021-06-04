@@ -88,14 +88,13 @@ ENDM
 
 
 ; amount of integers to prompt/display
-MAXNUMS=3
+MAXNUMS=10
 
 ; ASCII codes
 PLUS=43
 MINUS=45
 ZERO=48
 NINE=57
-
 LENGTHLIMIT=150
 
 ; sdword limits
@@ -208,10 +207,12 @@ main ENDP
 ; Name: ReadVal
 ; 
 ; Prompts user to enter a number, validates input, then converts string of digits into a SDWORD. 
+;	Invokes mGetString macro.
 ;
 ; Preconditions: errorMsg, enterNum are global strings
 ;				 intHolder is a global SDWORD
 ;				 mGetString macro exists
+;				 offset of intHolder, offset of enterNum, offset of errorMsg on system stack
 ;
 ; Postconditions: none
 ;
@@ -283,7 +284,6 @@ _toIntLoop:
 	INC		lengthCounter	; lengthCounter at first digit, check sign to be + or - or none
 	CMP		lengthCounter, 1
 	JNE		_continueCalcs	; past the first digit, so don't check for sign
-	
 	
 	; compares ascii code of - with digit present at beginning of string
 	
@@ -366,7 +366,6 @@ _writeToConsole:
 	MOV		EAX, intAccumulator
 	JMP		_return
 
-	
 	; invalid entries. display error message, reprompt user. 
 
 _invalidItem:
@@ -376,14 +375,12 @@ _invalidItem:
 	MOV		negBool, 0			; reset negBool
 	JMP		_rePrompt			; prompt user again for valid input
 
-
 	; stores the validated generated SDWORD in global variable intHolder
 
 _return:					
 
 	MOV		EDI, [EBP+8]	; OFFSET intHolder
 	MOV		[EDI], EAX
-
 
 	; restores registers and control
 	
@@ -392,7 +389,7 @@ _return:
 
 ReadVal ENDP
 
-; ---------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------
 ; Name: Math
 ; 
 ; Calculates and displays the sum and average (floor rounding) of an array.
@@ -481,6 +478,7 @@ Math ENDP
 ;
 ; Preconditions: value to be converted is on top of the system stack before procedure called
 ;				 mDisplayString macro exists
+;				 received SDWORD has been validated by ReadVal procedure
 ;
 ; Postconditions: string of digits written to console
 ;
@@ -497,6 +495,8 @@ WriteVal PROC
 
 	PUSHAD
 
+	; loads the value to be converted and sets flags for conversion
+
 	MOV		EAX, [EBP+8]		; value to be converted
 	MOV		testNum, EAX
 
@@ -505,6 +505,12 @@ WriteVal PROC
 	STOSB
 	CLD
 
+;---------------------------------------------------------------------------------
+; Sets local boolean flags.
+;	Determines and sets various local flags based on whether the number is 0, +, -, or
+;	the special case minimum SDWORD.
+;---------------------------------------------------------------------------------
+	
 	; determines if the number is positive or 0
 
 	CMP		testNum, -1
@@ -529,8 +535,13 @@ _notMinimumNum:
 _positiveOrZeroNum:
 	MOV		negFlag, 0
 
-
-	; sets up loop for string conversion.  Decrement the now positive number by 1 if min flag raised.
+;----------------------------------------------------------------------------------
+; String conversion loop.
+;	Sets up string conversion loop. In the event the special case minimum SDWORD was 
+;	detected, decrements the now positive value by 1. Converts to string by dividing
+;	by 10 and adding 48 to the remainder until the original integer reaches 0. This determines
+;	each character's ASCII value. Stores representation in outputString in reverse.
+;---------------------------------------------------------------------------------
 
 _loopSetup:
 	
@@ -543,57 +554,55 @@ _notSpecialCase:
 	MOV		EBX, 10				; divisor
 	MOV		ECX, LENGTHOF outputString	
 
-	; loops through the integer dividing by 10 until 0. Adds 48 to each remainder which determines the
-	; current digit's ASCII value.  If the special case minFlag is raised increments the final digit from 7 to 8.
-	; stores the string (in reverse) in outputString
+	; divides by 10, adds 48 to remainder
 
 _stringLoop:
 
-
-
 	CDQ					; prep div
-
 	IDIV	EBX
 	PUSH	EAX
 	MOV		AL, DL
 	ADD		AL, 48
 
 	; special case min flag raised
+
 	CMP		minFlag, 1
 	JNE		_continueLoop
 	DEC		minFlag			; set minFlagg to 0
 	INC		AL				; change the digit from 7 to 8
 	
+	; stores calculated ASCII values in outputString
 
 _continueLoop:
+
 	STOSB
-
-
 	POP		EAX
 	CMP		EAX, 0
 	JE		_stringComplete
-
 	LOOP	_stringLoop
 
 	; stores the negative sign if the negFlag was raised
 
 _stringComplete:
 	
-
 	CMP		negFlag, 1
 	JNE		_displayString
 	MOV		AL, MINUS
 	STOSB
 	DEC		ECX					; accomodates for - sign
 
+;---------------------------------------------------------------------------------
+; Reverses ouputString and displays reversedString.
+;	Indexes into reversedString to determine where to start storing digits. Writes
+;	the reverse of outputString to reversedString.
+;---------------------------------------------------------------------------------
 
-	; reverses the ouputString for proper display
+	; sets up location where to begin storing string
 
 _displayString:
 
 	LEA		EDI, reversedString
 	LEA		ESI, outputString
-
 	ADD		ESI, LENGTHOF reversedString	 ; points at end of outputString
 	DEC		ECX								 ; accounts for the possible - sign
 	SUB		ESI, ECX						 ; moves pointer backwards
