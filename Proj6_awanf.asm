@@ -21,6 +21,7 @@ INCLUDE Irvine32.inc
 ; Displays prompt then get's user's keyboard input into a memory location.
 ;
 ; Preconditions: promptOffset, storeLocationOffset, and userInputLengthOffset must be mem addresses
+;				 do not use EAX as argument for userInputLengthOffset
 ;
 ; Postconditions: string at promptOffset written to console
 ;				  user prompted for input			  
@@ -88,7 +89,7 @@ ENDM
 
 
 ; amount of integers to prompt/display
-MAXNUMS=10
+MAXNUMS=3
 
 ; ASCII codes
 PLUS=43
@@ -116,6 +117,7 @@ MIN= -2147483648
 	userNumInfo		BYTE		"These are the numbers you entered:",13,10,0
 
 	farewell		BYTE		"Thanks for using this program! Bye!",13,10,0
+	index			DWORD		0
 
 
 
@@ -123,33 +125,27 @@ MIN= -2147483648
 .code
 main PROC
 
-	; display prog title and progr name
+	; display program title and programmer's name
 
 	mDisplayString OFFSET progTitle 
 	
 ;--------------------------------------------------------------------------------------------	
-; Prompt user for input and store in array.
-;		Queries user for MAXNUMS amount of strings and converts them to SDWORDS. Then, stores
-;		converted strings in an array.
+; Prompt user for input and stores in array.
+;		Queries user for MAXNUMS amount of strings and converts them to SDWORDS. 
 ;--------------------------------------------------------------------------------------------
+	
 	MOV		ECX, MAXNUMS			; amount of strings to gather from user
-	MOV		EDI, OFFSET intArray
 
 	; loop MAXNUMS times calling ReadVal procedure
 
 _getNums:	
-	
+
+	PUSH	OFFSET	index
+	PUSH	OFFSET	intArray	
 	PUSH	OFFSET	errorMsg
 	PUSH	OFFSET	enterNum
 	PUSH	OFFSET	intHolder
-	CALL	ReadVal
-	
-	; stores the generated integer in an array
-
-	MOV		EAX, intHolder
-	MOV		[EDI], EAX
-	ADD		EDI, 4
-
+	CALL	ReadVal	
 	LOOP	_getNums
 	CALL	CrLf
 
@@ -379,13 +375,22 @@ _invalidItem:
 
 _return:					
 
-	MOV		EDI, [EBP+8]	; OFFSET intHolder
+	; stores result in array
+
+	MOV		EDI, [EBP+20] ;  [EBP+8]	; OFFSET intHolder
+	
+	MOV		EBX, [EBP+24]		; index
+	ADD		EDI, [EBX]			; increment the index 
+	
 	MOV		[EDI], EAX
+
+	MOV		EAX, 4
+	ADD		[EBX], EAX
 
 	; restores registers and control
 	
 	POPAD
-	RET 12
+	RET 20
 
 ReadVal ENDP
 
