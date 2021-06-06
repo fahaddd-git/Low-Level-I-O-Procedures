@@ -49,7 +49,7 @@ mGetString MACRO promptOffset:REQ, storeLocationOffset:REQ, maxLength:REQ, userI
 	
 	; prompts user for data
 	MOV		EDX, storeLocationOffset	 ; point to the buffer
-	MOV		ECX, maxLength				 ; specify max characters
+	MOV		ECX, maxLength			 ; specify max characters
 	CALL	ReadString
 	
 	; stores amount of bytes read
@@ -89,16 +89,16 @@ ENDM
 
 
 ; amount of integers to prompt/display
-MAXNUMS=3
+MAXNUMS=10
 
 ; ASCII codes
 PLUS=43
 MINUS=45
 ZERO=48
 NINE=57
-LENGTHLIMIT=150
 
-; sdword limits
+; sdword and buffer limits
+LENGTHLIMIT=150
 MAX= 2147483647
 MIN= -2147483648
 
@@ -118,7 +118,6 @@ MIN= -2147483648
 
 	farewell		BYTE		"Thanks for using this program! Bye!",13,10,0
 	index			DWORD		0
-
 
 
 
@@ -152,23 +151,22 @@ _getNums:
 
 ;--------------------------------------------------------------------------------------------	
 ; Display stored array as strings.
-;		Loops through SDWORD array converting each element to a string using the WriteVal
-;		procedure and then display string using mDisplayString macro.
+;		Loops through SDWORD array converting to a string and displaying each element as a string.
 ;--------------------------------------------------------------------------------------------
 
-	mDisplayString	OFFSET userNumInfo
+	mDisplayString	OFFSET userNumInfo 
 
-	MOV		EDI, OFFSET intArray
 	MOV		ECX, LENGTHOF intArray
+	MOV		index, 0					; reset index
 
 	; loop through array, convert to string, display
 
 _printArray:
-	MOV		EAX, [EDI]
-	PUSH	EAX
-	CALL	WriteVal
-	mDisplayString	OFFSET delimiter
-	ADD		EDI, 4
+	
+	PUSH	OFFSET delimiter
+	PUSH	OFFSET index
+	PUSH	OFFSET intArray
+	CALL	display
 	LOOP	_printArray
 	CALL	CrLf
 
@@ -197,27 +195,31 @@ main ENDP
 
 
 
-
-
 ; -----------------------------------------------------------------------------------------------
 ; Name: ReadVal
 ; 
-; Prompts user to enter a number, validates input, then converts string of digits into a SDWORD. 
+; Prompts user to enter a number, validates input, converts string of digits into a SDWORD, then stores
+;	a converted SDWORD in an array. Entries can be up to but not including 16 characters long.
 ;	Invokes mGetString macro.
 ;
 ; Preconditions: errorMsg, enterNum are global strings
 ;				 intHolder is a global SDWORD
+;				 intArray is a global SDWORD array
+;				 index is a global DWORD
 ;				 mGetString macro exists
-;				 offset of intHolder, offset of enterNum, offset of errorMsg on system stack
+;				 offset of intHolder, offset of enterNum, offset of errorMsg, offset of intArray, offset of index on system stack
 ;
 ; Postconditions: none
 ;
 ; Receives: 
-;			[EBP+8]  = offset of intHolder global SDWORD
+;			[EBP+8]  = offset of intHolder global DWORD
 ;			[EBP+12] = offset of enterNum global string
 ;			[EBP+16] = offset of errorMsg global string
+;			[EBP+20] = offset of intArray
+;			[EBP+24] = offset of index
 ;
-; returns: intHolder = valid user input as an SDWORD
+; returns: intArray[index] = valid user input as an SDWORD
+;		   index = incremented by 4 for each valid user input
 ; ---------------------------------------------------------------------------------------------------
 
 ReadVal PROC
@@ -231,9 +233,9 @@ ReadVal PROC
 
 _rePrompt:
 	
-	MOV		negBool, 0
+	MOV		negBool, 0			; set negative boolean flag to false
 	LEA		ECX, storedString
-	LEA		EBX, inputLength
+	LEA		EBX, inputLength		
 	mGetString	[EBP+12], ECX, LENGTHLIMIT, EBX
 
 
@@ -375,15 +377,13 @@ _invalidItem:
 
 _return:					
 
-	; stores result in array
+	; stores converted valid result in array
 
-	MOV		EDI, [EBP+20] ;  [EBP+8]	; OFFSET intHolder
+	MOV		EDI, [EBP+20]		; OFFSET intArray
 	
-	MOV		EBX, [EBP+24]		; index
-	ADD		EDI, [EBX]			; increment the index 
-	
+	MOV		EBX, [EBP+24]		; OFFSET index
+	ADD		EDI, [EBX]			; increment pointer
 	MOV		[EDI], EAX
-
 	MOV		EAX, 4
 	ADD		[EBX], EAX
 
@@ -393,6 +393,61 @@ _return:
 	RET 20
 
 ReadVal ENDP
+
+; -----------------------------------------------------------------------------------------------
+; Name: display
+; 
+; Displays an array of SDWORDs as strings delimited by a " ". 
+;	Invokes mDisplayString macro and calls WriteVal proc.
+;
+; Preconditions:  delimiter is a global string
+;				  index is a global DWORD variable
+;				  intArray is a validated and filled SDWORD array
+;				  mDisplayString macro and WriteVal procedure exist
+;				  offset intArray, offset index, and offset delimiter on system stack
+;
+; Postconditions: intArray printed to console
+;
+; Receives: 
+;			 [EBP+16]= starting address of delimiter string
+;			 [EBP+12] = offset of index DWORD
+;			 [EBP+8] = starting address of intArray SDWORD array
+;
+; returns: none
+; ---------------------------------------------------------------------------------------------------
+
+
+display PROC
+
+	; initialize stack frame, preserve registers
+	
+	PUSH	EBP
+	MOV		EBP, ESP
+	PUSHAD
+	
+	; load array and increment pointer to location to be converted
+
+	MOV		EAX, [EBP+8]	; intArray address
+	MOV		EBX, [EBP+12]	
+	ADD		EAX, [EBX]		; increment pointer
+
+	; send value to WriteVal for string conversion
+
+	PUSH	[EAX]			
+	CALL	WriteVal
+
+	mDisplayString [EBP+16]	; print delimiter
+
+	MOV		EAX, 4
+	ADD		[EBX], EAX			; increment index
+
+	; restore registers and control
+
+	POPAD
+	POP		EBP
+	RET		12
+
+display ENDP
 
 ;---------------------------------------------------------------------------------
 ; Name: Math
