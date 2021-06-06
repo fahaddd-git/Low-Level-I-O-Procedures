@@ -1,14 +1,14 @@
 TITLE  Low level I/O Procedure Program     (Proj6_awanf.asm)
 
 ; Author: Fahad Awan
-; Last Modified: 6/2/2021
+; Last Modified: 6/6/2021
 ; OSU email address:awanf@oregonstate.edu
 ; Course number/section:   CS271 Section 400
 ; Project Number:         6        Due Date: 6/6/2021
 ; Description: Program displays program title and programmer.
 ;			   Program prompts user for 10 strings of digits up to 15 (inclusive) digits long.
 ;			   Program validates that the string entry is valid and in the acceptable range of an SDWORD.
-;			   Program converts the 10 user entered strings to integers.
+;			   Program converts and stores each user entered strings to integers in an array.
 ;			   Program displays the user entered strings of digits.
 ;			   Program calculates and displays the sum and average of the validated user input.
 ;			   Program bids farewell.
