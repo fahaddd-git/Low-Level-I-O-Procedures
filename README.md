@@ -1,4 +1,3 @@
-# Low-level-I-O-procedures
 
 #### **Program Description**
 ##### **Overview**
@@ -41,7 +40,12 @@ IA-32 MASM Assembly implementation of converting strings to integers (SDWORD) an
 #### **Sample Output**
 ![sampleOutput](https://user-images.githubusercontent.com/66268023/121953163-d6b99200-cd22-11eb-8261-1a73b1be53f2.JPG)
 
-
+#### **Usage**
+1. Clone the repository onto your local machine
+2. Download the Irvine library from http://asmirvine.com/gettingStartedVS2019/Irvine.zip 
+3. Extract the contents of this ZIP file into the C:\ directory. If the files were extracted properly, the library file should exist in C:\Irvine\Irvine32.lib
+4. Open the Project.sln file from the cloned repository using Visual Studio
+5. Run the .asm file from within Visual Studio
 
 #### **Notes**
 
