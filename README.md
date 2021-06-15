@@ -1,10 +1,10 @@
 # **Low Level I/O Procedures**
-#### **Program Description**
-##### **Overview**
+### **Program Description**
+#### **Overview**
 
 IA-32 MASM Assembly implementation of converting strings to integers (SDWORD) and back again.  Receives and validates 10 user entered strings then calculates the average and sum displaying the results as a string.
 
-##### **Implementation Details** 
+#### **Implementation Details** 
 -   Implements two macros `mGetString` and `mDisplayString` for string processing. These macros use Irvine’s  `ReadString`  to get input from the user, and  `WriteString`  procedures to display output.
     -   `mGetString`: Displays a prompt  _(input parameter, by reference_), then get the user’s keyboard input into a memory location  _(output parameter, by reference_). Provides a count  _(input parameter, by value)_  for the length of input string to be accommodated and a provides a number of bytes read (_output parameter, by reference)_  by the macro.
     -   `mDisplayString`: Prints the string which is stored in a specified memory location  _(input parameter, by reference_).
@@ -22,7 +22,7 @@ IA-32 MASM Assembly implementation of converting strings to integers (SDWORD) an
     3.  Display the integers, their sum, and their average by using  `WriteVal`  procedure.
 
 
-#### **Program Features**
+### **Program Features**
 
 1.  User’s numeric input validated by:
     1.  Reading the user's input as a string and converting the string to numeric form.
@@ -37,17 +37,17 @@ IA-32 MASM Assembly implementation of converting strings to integers (SDWORD) an
 8.  The program  uses  _Register Indirect_  addressing for integer (SDWORD) array elements, and  _Base+Offset_  addressing for accessing parameters on the runtime stack.
 9.  Procedures use local variables when appropriate. 
 
-#### **Sample Output**
+### **Sample Output**
 ![sampleOutput](https://user-images.githubusercontent.com/66268023/121953163-d6b99200-cd22-11eb-8261-1a73b1be53f2.JPG)
 
-#### **Usage**
+### **Usage**
 1. Clone the repository onto your local machine
 2. Download the Irvine library from http://asmirvine.com/gettingStartedVS2019/Irvine.zip 
 3. Extract the contents of this ZIP file into the C:\ directory. If the files were extracted properly, the library file should exist in C:\Irvine\Irvine32.lib
 4. Open the Project.sln file from the cloned repository using Visual Studio
 5. Run the .asm file from within Visual Studio
 
-#### **Notes**
+### **Notes**
 
 1.  The total sum of the valid numbers is assumed to fit inside a 32 bit register. [-2147483648....2147483647]
 2. The maximum length of user input is 15 characters.
