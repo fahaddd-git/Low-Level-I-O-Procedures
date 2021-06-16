@@ -52,4 +52,4 @@ IA-32 MASM Assembly implementation of converting strings to integers (SDWORD) an
 1.  The total sum of the valid numbers is assumed to fit inside a 32 bit register. [-2147483648....2147483647]
 2. The maximum length of user input is 15 characters.
 3.  When displaying the average, the result is rounded down (floor) to the nearest integer.
-4.  This program was created as the Sprint 2021 final project of CS 271 Computer Architecture and Assembly Language at Oregon State University.
+4.  This program was created as the Spring 2021 final project of CS 271 Computer Architecture and Assembly Language at Oregon State University.
